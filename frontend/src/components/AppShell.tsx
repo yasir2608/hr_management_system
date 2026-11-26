@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { navGroups } from "./nav";
 import { initials } from "./ui";
@@ -12,6 +13,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function signOutOthers() {
+    try {
+      const result = await api<{ message: string }>("/auth/logout-others", { method: "POST", noCompany: true });
+      setNotice(result.message);
+    } catch (caught) {
+      setNotice(caught instanceof ApiError ? caught.message : "We could not sign out your other devices.");
+    }
+    window.setTimeout(() => setNotice(null), 4000);
+  }
 
   useEffect(() => {
     if (status === "guest") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
@@ -91,12 +103,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {user.companies.length > 1 && (
                   <Link role="menuitem" href="/select-company">Switch company</Link>
                 )}
+                <button role="menuitem" onClick={() => void signOutOthers()}>Sign out other devices</button>
                 <button role="menuitem" onClick={() => void signOut()}>Sign out</button>
               </div>
             )}
           </div>
         </header>
         <div className="content">{children}</div>
+        {notice && <div className="toast show" role="status">{notice}</div>}
         <div className="mobilebar">
           <select aria-label="Choose screen" value={current?.href ?? ""} onChange={(event) => router.push(event.target.value)}>
             {items.map((item) => (

@@ -69,6 +69,17 @@ class LoginController extends Controller
         return response()->json(['message' => 'You have been signed out.']);
     }
 
+    /**
+     * Signs out every other session of this user, keeping the current one.
+     */
+    public function destroyOthers(Request $request): JsonResponse
+    {
+        $current = $request->user()->currentAccessToken();
+        $count = $request->user()->tokens()->whereKeyNot($current?->getKey())->delete();
+
+        return response()->json(['message' => "Signed out of {$count} other session(s).", 'count' => $count]);
+    }
+
     private function fail(string $message, string $code, int $status): JsonResponse
     {
         return response()->json(['message' => $message, 'code' => $code], $status);

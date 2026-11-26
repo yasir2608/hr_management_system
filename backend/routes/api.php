@@ -13,6 +13,7 @@ Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])->
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/auth/me', [SessionController::class, 'show']);
     Route::post('/auth/logout', [LoginController::class, 'destroy']);
+    Route::post('/auth/logout-others', [LoginController::class, 'destroyOthers']);
 
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);

@@ -59,7 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(
     () =>
       onApiError((error) => {
-        if (error.status === 401) resetToGuest();
+        if (error.status === 401) {
+          // Tell the sign-in page why the person was sent back to it.
+          if (session.token()) {
+            try {
+              window.sessionStorage.setItem("myhrms.sessionEnded", "1");
+            } catch {
+              /* ignore */
+            }
+          }
+          resetToGuest();
+        }
       }),
     [resetToGuest],
   );

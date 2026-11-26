@@ -20,6 +20,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("myhrms.sessionEnded")) {
+        window.sessionStorage.removeItem("myhrms.sessionEnded");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from browser storage
+        setSessionEnded(true);
+      }
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -47,6 +60,7 @@ export default function LoginPage() {
           <h2>Welcome back</h2>
           <div className="tiny">Sign in to your M.Y HRMS workspace</div>
         </div>
+        {sessionEnded && !error && <Banner tone="info">Your session ended, either after a period of inactivity or because your password changed. Sign in again to continue.</Banner>}
         {error && (
           <Banner tone="error">
             {error.message}

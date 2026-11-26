@@ -50,7 +50,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Absolute session length; a session also ends after idle_timeout minutes without use.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 720),
+
+    'idle_timeout' => (int) env('SANCTUM_IDLE_TIMEOUT', 120),
 
     /*
     |--------------------------------------------------------------------------

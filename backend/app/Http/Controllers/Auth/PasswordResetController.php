@@ -50,6 +50,9 @@ class PasswordResetController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                // Anyone still signed in with the old password is signed out everywhere.
+                $user->tokens()->delete();
+
                 event(new PasswordReset($user));
             },
         );
