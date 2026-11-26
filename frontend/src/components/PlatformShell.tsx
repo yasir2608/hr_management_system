@@ -6,7 +6,10 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { initials } from "./ui";
 
-export const platformNav = [{ href: "/platform/companies", label: "Customer companies", icon: "▣" }];
+export const platformNav = [
+  { href: "/platform/companies", label: "Customer companies", icon: "▣" },
+  { href: "/platform/support", label: "Support access", icon: "⚑" },
+];
 
 /** Layout for M.Y HRMS operations staff. Not tied to any one company. */
 export function PlatformShell({ children }: { children: React.ReactNode }) {

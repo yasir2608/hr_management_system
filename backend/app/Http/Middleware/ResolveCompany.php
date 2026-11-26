@@ -6,6 +6,7 @@ use App\Access\Access;
 use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\CompanyUser;
+use App\Models\SupportAccessGrant;
 use App\Tenancy\CurrentCompany;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +48,14 @@ class ResolveCompany
                 ->first()
             : null;
 
+        if ($membership === null && $user->platform_role !== null && Str::isUlid($companyId)) {
+            $grant = SupportAccessGrant::activeFor($user->getAuthIdentifier(), $companyId);
+
+            if ($grant !== null) {
+                return $this->asSupport($request, $grant, $next);
+            }
+        }
+
         if ($membership === null || $membership->status === CompanyUser::STATUS_REMOVED) {
             $this->recordBlockedAttempt($request, $companyId);
 
@@ -65,6 +74,39 @@ class ResolveCompany
         app(Access::class)->forget();
 
         return $this->currentCompany->runAs($membership->company, fn (): Response => $next($request));
+    }
+
+    /**
+     * Support staff with an active grant: read-only, and every request is recorded in the
+     * company's activity history so the company can see what support looked at.
+     */
+    private function asSupport(Request $request, SupportAccessGrant $grant, Closure $next): Response
+    {
+        if (! $grant->company->isActive() && ! $request->isMethodSafe()) {
+            return $this->deny('This company account is suspended.', 'COMPANY_SUSPENDED', 403);
+        }
+
+        if (! $request->isMethodSafe()) {
+            return $this->deny('Support access is read-only. Ask the company to make this change.', 'SUPPORT_READ_ONLY', 403);
+        }
+
+        app(Access::class)->forget();
+
+        return $this->currentCompany->runAs($grant->company, function () use ($request, $grant, $next): Response {
+            ActivityLog::query()->create([
+                'company_id' => $grant->company_id,
+                'actor_user_id' => $grant->user_id,
+                'action' => 'support.viewed',
+                'subject_type' => 'support_access_grant',
+                'subject_id' => $grant->id,
+                'description' => 'M.Y HRMS support viewed '.$request->path(),
+                'properties' => ['path' => $request->path(), 'reason' => $grant->reason],
+                'ip_address' => $request->ip(),
+                'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+            ]);
+
+            return $next($request);
+        });
     }
 
     /**

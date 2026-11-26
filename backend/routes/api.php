@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Access\CompanySupportAccessController;
 use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Access\UserAccessController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Platform\SupportAccessController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +49,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('platform:ops')->prefix('platform')->group(function (): void {
         Route::get('/companies', [PlatformCompanyController::class, 'index']);
         Route::post('/companies', [PlatformCompanyController::class, 'store']);
+    });
+
+    // Support access: any M.Y HRMS staff role (ops or support).
+    Route::middleware('platform')->prefix('platform')->group(function (): void {
+        Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
+        Route::get('/support-access', [SupportAccessController::class, 'index']);
+        Route::post('/support-access', [SupportAccessController::class, 'store'])->middleware('throttle:20,1');
+        Route::post('/support-access/{grant}/end', [SupportAccessController::class, 'end']);
     });
 
     Route::middleware('company')->group(function (): void {
@@ -86,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
         Route::get('/invitations', [InvitationController::class, 'index'])->middleware('permission:users.view,users.manage');
+        Route::get('/support-access', [CompanySupportAccessController::class, 'index'])->middleware('permission:users.view,users.manage');
         Route::middleware('permission:users.manage')->group(function (): void {
             Route::post('/invitations', [InvitationController::class, 'store']);
             Route::post('/invitations/{invitation}/resend', [UserAccessController::class, 'resendInvitation']);
@@ -95,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/users/{membership}/suspend', [UserAccessController::class, 'suspend']);
             Route::post('/users/{membership}/reactivate', [UserAccessController::class, 'reactivate']);
             Route::post('/users/{membership}/remove', [UserAccessController::class, 'remove']);
+            Route::post('/support-access/{grant}/revoke', [CompanySupportAccessController::class, 'revoke']);
         });
 
         // Roles and permissions

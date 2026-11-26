@@ -118,7 +118,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
-        <div className="content">{children}</div>
+        <div className="content">
+          {company.membership_status === "support" && (
+            <div className="banner info" role="status">
+              M.Y HRMS support access · read-only until {new Date(company.support_access_until ?? "").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. Every page you open is recorded for {company.name}.{" "}
+              <Link className="link" href="/platform/support">Back to operations</Link>
+            </div>
+          )}
+          {children}
+        </div>
         {notice && <div className="toast show" role="status">{notice}</div>}
         <div className="mobilebar">
           <select aria-label="Choose screen" value={current?.href ?? ""} onChange={(event) => router.push(event.target.value)}>

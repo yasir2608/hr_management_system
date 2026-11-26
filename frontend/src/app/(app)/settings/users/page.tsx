@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { InviteModal } from "@/components/users/InviteModal";
 import { ManageUserModal } from "@/components/users/ManageUserModal";
+import { SupportAccessPanel } from "@/components/users/SupportAccessPanel";
 import { Badge, Banner, EmptyState, formatDateTime, PageHead, Panel, Person, Stat, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -154,6 +155,7 @@ function UsersPage() {
           </Table>
         )}
       </Panel>
+      <SupportAccessPanel canManage={canManage} />
     </>
   );
 }

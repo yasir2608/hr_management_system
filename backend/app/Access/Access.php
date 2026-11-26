@@ -5,6 +5,7 @@ namespace App\Access;
 use App\Models\CompanyUser;
 use App\Models\Employee;
 use App\Models\RoleAssignment;
+use App\Models\SupportAccessGrant;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
@@ -73,6 +74,10 @@ class Access
             return $this->permissions;
         }
 
+        if ($this->supportGrant() !== null) {
+            return $this->permissions = collect(SupportAccessGrant::PERMISSIONS)->sort()->values();
+        }
+
         $roleIds = $this->assignments()->pluck('role_id')->unique();
 
         return $this->permissions = $roleIds->isEmpty()
@@ -96,6 +101,10 @@ class Access
             return EmployeeScope::none();
         }
 
+        if ($this->supportGrant() !== null) {
+            return new EmployeeScope(true);
+        }
+
         $granting = DB::table('permission_role')
             ->join('permissions', 'permissions.id', '=', 'permission_role.permission_id')
             ->where('permission_role.company_id', $this->currentCompany->id())
@@ -103,6 +112,21 @@ class Access
             ->pluck('permission_role.role_id');
 
         return EmployeeScope::fromAssignments($this->assignments()->whereIn('role_id', $granting)->values());
+    }
+
+    /**
+     * The active support grant when an M.Y HRMS staff member (not a member) is viewing the company.
+     */
+    public function supportGrant(): ?SupportAccessGrant
+    {
+        $user = $this->user();
+        $companyId = $this->currentCompany->id();
+
+        if ($user === null || $companyId === null || $user->platform_role === null || $this->membership() !== null) {
+            return null;
+        }
+
+        return SupportAccessGrant::activeFor($user->getAuthIdentifier(), $companyId);
     }
 
     /**

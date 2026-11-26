@@ -3,8 +3,10 @@ export type CompanyChoice = {
   name: string;
   country_code: string;
   can_enter: boolean;
-  membership_status: "active" | "suspended";
+  membership_status: "active" | "suspended" | "support";
   company_status: "active" | "suspended";
+  /** Set when an M.Y HRMS staff member views the company through a support grant. */
+  support_access_until: string | null;
 };
 
 export type SessionUser = {
