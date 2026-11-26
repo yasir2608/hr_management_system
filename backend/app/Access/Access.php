@@ -3,6 +3,7 @@
 namespace App\Access;
 
 use App\Models\CompanyUser;
+use App\Models\Employee;
 use App\Models\RoleAssignment;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -83,6 +84,35 @@ class Access
                 ->distinct()
                 ->orderBy('permissions.key')
                 ->pluck('permissions.key');
+    }
+
+    /**
+     * The employees this permission reaches: company-wide, or limited by the scope of the
+     * role assignments that grant it.
+     */
+    public function scopeFor(string $permission): EmployeeScope
+    {
+        if (! $this->can($permission)) {
+            return EmployeeScope::none();
+        }
+
+        $granting = DB::table('permission_role')
+            ->join('permissions', 'permissions.id', '=', 'permission_role.permission_id')
+            ->where('permission_role.company_id', $this->currentCompany->id())
+            ->where('permissions.key', $permission)
+            ->pluck('permission_role.role_id');
+
+        return EmployeeScope::fromAssignments($this->assignments()->whereIn('role_id', $granting)->values());
+    }
+
+    /**
+     * The employee record of the signed-in user in this company, if any.
+     */
+    public function employee(): ?Employee
+    {
+        $user = $this->user();
+
+        return $user === null ? null : Employee::query()->where('user_id', $user->getAuthIdentifier())->first();
     }
 
     public function can(string $permission): bool
