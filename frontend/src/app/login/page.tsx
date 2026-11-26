@@ -18,7 +18,7 @@ function asApiError(caught: unknown) {
 }
 
 export default function LoginPage() {
-  const { status, company, signIn, verifyMfa } = useAuth();
+  const { status, user, company, signIn, verifyMfa } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,8 +44,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     // People in several companies choose one first; one company opens straight away.
-    router.replace(company ? nextPath() : "/select-company");
-  }, [status, company, router]);
+    router.replace(company ? nextPath() : user?.platform_role ? "/platform/companies" : "/select-company");
+  }, [status, user, company, router]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -177,6 +177,9 @@ export default function LoginPage() {
             Continue with company SSO
           </button>
           {ssoNotice && <div className="tiny" style={{ textAlign: "center" }}>{ssoNotice}</div>}
+          <div className="tiny" style={{ textAlign: "center" }}>
+            New to M.Y HRMS? <Link className="link" href="/register">Set up a company workspace</Link>
+          </div>
         </div>
       </form>
     </div>

@@ -51,6 +51,9 @@ class DemoSeeder extends Seeder
         $this->member($lahore, User::query()->where('email', 'sarah@northstar.example')->firstOrFail());
 
         $this->user('disabled@northstar.example', 'Former Employee', User::STATUS_DISABLED);
+
+        // M.Y HRMS operations staff: not a member of any company.
+        $this->user('ops@myhrms.example', 'Omar Siddiqui')->forceFill(['platform_role' => 'ops'])->save();
     }
 
     protected function user(string $email, string $name, string $status = User::STATUS_ACTIVE): User

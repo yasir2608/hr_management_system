@@ -46,7 +46,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <h2>No company to open</h2>
             <div className="tiny">Your account is not linked to an active company workspace. Contact your company administrator.</div>
           </div>
-          <button className="btn block" onClick={() => void signOut()}>Sign out</button>
+          <div className="stack">
+            {user.platform_role && <Link className="btn primary block" style={{ textAlign: "center" }} href="/platform/companies">Go to platform operations</Link>}
+            <button className="btn block" onClick={() => void signOut()}>Sign out</button>
+          </div>
         </div>
       </div>
     );

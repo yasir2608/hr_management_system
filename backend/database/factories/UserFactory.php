@@ -43,6 +43,13 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function operations(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'platform_role' => 'ops',
+        ]);
+    }
+
     public function disabled(): static
     {
         return $this->state(fn (array $attributes) => [
