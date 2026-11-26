@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SessionUserResource;
+use App\Models\LoginAttempt;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ class LoginController extends Controller
         $throttleKey = 'login:'.$email.'|'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_ATTEMPTS)) {
+            LoginAttempt::record($request, $email, User::query()->where('email', $email)->first(), LoginAttempt::REASON_LOCKED);
             $minutes = (int) ceil(RateLimiter::availableIn($throttleKey) / 60);
 
             return $this->fail(
@@ -42,16 +44,20 @@ class LoginController extends Controller
         // Unknown email and wrong password get the same answer, so accounts cannot be discovered.
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
             RateLimiter::hit($throttleKey, self::LOCKOUT_SECONDS);
+            LoginAttempt::record($request, $email, $user, $user === null ? LoginAttempt::REASON_UNKNOWN_EMAIL : LoginAttempt::REASON_WRONG_PASSWORD);
 
             return $this->fail('The email or password is incorrect.', 'INVALID_CREDENTIALS', 422);
         }
 
         // Only revealed once the password is proven, so it exposes nothing to a stranger.
         if (! $user->isActive()) {
+            LoginAttempt::record($request, $email, $user, LoginAttempt::REASON_DISABLED);
+
             return $this->fail('This account is disabled. Contact your company administrator to restore access.', 'ACCOUNT_DISABLED', 403);
         }
 
         RateLimiter::clear($throttleKey);
+        LoginAttempt::record($request, $email, $user);
 
         $user->forceFill(['last_login_at' => now()])->save();
         $token = $user->createToken('web')->plainTextToken;
@@ -60,6 +66,20 @@ class LoginController extends Controller
             'token' => $token,
             'user' => new SessionUserResource($user),
         ]);
+    }
+
+    /**
+     * The signed-in user's own recent sign-in activity.
+     */
+    public function activity(Request $request): JsonResponse
+    {
+        $attempts = LoginAttempt::query()
+            ->where(fn ($query) => $query->where('user_id', $request->user()->id)->orWhere('email', $request->user()->email))
+            ->latest('created_at')
+            ->limit(50)
+            ->get(['id', 'succeeded', 'failure_reason', 'ip_address', 'user_agent', 'created_at']);
+
+        return response()->json(['data' => $attempts]);
     }
 
     public function destroy(Request $request): JsonResponse

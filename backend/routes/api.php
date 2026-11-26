@@ -14,6 +14,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/auth/me', [SessionController::class, 'show']);
     Route::post('/auth/logout', [LoginController::class, 'destroy']);
     Route::post('/auth/logout-others', [LoginController::class, 'destroyOthers']);
+    Route::get('/auth/sign-ins', [LoginController::class, 'activity']);
 
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);

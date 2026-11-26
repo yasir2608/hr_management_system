@@ -103,6 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {user.companies.length > 1 && (
                   <Link role="menuitem" href="/select-company">Switch company</Link>
                 )}
+                <Link role="menuitem" href="/account/security">Sign-in &amp; security</Link>
                 <button role="menuitem" onClick={() => void signOutOthers()}>Sign out other devices</button>
                 <button role="menuitem" onClick={() => void signOut()}>Sign out</button>
               </div>
