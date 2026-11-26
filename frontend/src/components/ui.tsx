@@ -151,3 +151,18 @@ export function money(amount: number | string | null | undefined, currency = "US
   if (amount === null || amount === undefined || amount === "") return "—";
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(amount));
 }
+
+/**
+ * Shows a sensitive value, or a "Restricted" marker when the API withheld it
+ * because the viewer lacks the payroll-level permission.
+ */
+export function Sensitive({ field, restricted, children }: { field: string; restricted?: string[]; children: ReactNode }) {
+  if (restricted?.includes(field)) {
+    return (
+      <span className="badge gray" title="Needs payroll-level permission">
+        Restricted
+      </span>
+    );
+  }
+  return <>{children}</>;
+}
