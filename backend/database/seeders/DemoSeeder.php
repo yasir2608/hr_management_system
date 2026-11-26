@@ -2,8 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Access\PermissionCatalogue;
+use App\Access\StarterRoles;
 use App\Models\Company;
 use App\Models\CompanyUser;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -26,17 +29,20 @@ class DemoSeeder extends Seeder
             'status' => Company::STATUS_ACTIVE,
         ]);
 
+        PermissionCatalogue::sync();
+        StarterRoles::createFor($northstar);
+
+        // One person per starter role.
         $people = [
-            'sarah@northstar.example' => 'Sarah Ahmed',
-            'helen@northstar.example' => 'Helen Brooks',
-            'paul@northstar.example' => 'Paul Okafor',
-            'noah@northstar.example' => 'Noah Williams',
-            'ava@northstar.example' => 'Ava Thompson',
+            'sarah@northstar.example' => ['Sarah Ahmed', Role::OWNER],
+            'helen@northstar.example' => ['Helen Brooks', Role::HR_ADMIN],
+            'paul@northstar.example' => ['Paul Okafor', Role::PAYROLL_ADMIN],
+            'noah@northstar.example' => ['Noah Williams', Role::MANAGER],
+            'ava@northstar.example' => ['Ava Thompson', Role::EMPLOYEE],
         ];
 
-        foreach ($people as $email => $name) {
-            $user = $this->user($email, $name);
-            $this->member($northstar, $user);
+        foreach ($people as $email => [$name, $role]) {
+            $this->member($northstar, $this->user($email, $name), $role);
         }
 
         $lahore = Company::query()->updateOrCreate(['name' => 'Lahore Labs'], [
@@ -48,7 +54,8 @@ class DemoSeeder extends Seeder
         ]);
 
         // Sarah runs both companies, so she sees the company picker.
-        $this->member($lahore, User::query()->where('email', 'sarah@northstar.example')->firstOrFail());
+        StarterRoles::createFor($lahore);
+        $this->member($lahore, User::query()->where('email', 'sarah@northstar.example')->firstOrFail(), Role::OWNER);
 
         $this->user('disabled@northstar.example', 'Former Employee', User::STATUS_DISABLED);
 
@@ -66,11 +73,17 @@ class DemoSeeder extends Seeder
         ]);
     }
 
-    protected function member(Company $company, User $user, string $status = CompanyUser::STATUS_ACTIVE): CompanyUser
+    protected function member(Company $company, User $user, ?string $role = null, string $status = CompanyUser::STATUS_ACTIVE): CompanyUser
     {
-        return CompanyUser::query()->updateOrCreate(
+        $membership = CompanyUser::query()->updateOrCreate(
             ['company_id' => $company->id, 'user_id' => $user->id],
             ['status' => $status, 'joined_at' => now()],
         );
+
+        if ($role !== null) {
+            StarterRoles::assign($membership, $role);
+        }
+
+        return $membership;
     }
 }

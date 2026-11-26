@@ -49,7 +49,7 @@ class PayrollCountriesTest extends TestCase
         $this->inCompany()->putJson('/api/company/payroll-countries', ['countries' => ['GB'], 'primary' => 'GB']);
 
         $other = Company::factory()->create();
-        $this->addMember($other, $this->member);
+        $this->addMember($other, $this->member, role: 'owner');
 
         $this->inCompany(company: $other)->getJson('/api/company/payroll-countries')->assertJsonPath('countries', []);
     }

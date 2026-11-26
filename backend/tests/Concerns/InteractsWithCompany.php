@@ -2,8 +2,10 @@
 
 namespace Tests\Concerns;
 
+use App\Access\StarterRoles;
 use App\Models\Company;
 use App\Models\CompanyUser;
+use App\Models\Role;
 use App\Models\User;
 use App\Tenancy\CurrentCompany;
 
@@ -14,20 +16,35 @@ trait InteractsWithCompany
 {
     protected Company $company;
 
+    /** The default member: holds the owner role unless a test says otherwise. */
     protected User $member;
 
-    protected function setUpCompany(array $companyAttributes = []): void
+    protected function setUpCompany(array $companyAttributes = [], ?string $memberRole = Role::OWNER): void
     {
         $this->company = Company::factory()->create($companyAttributes);
-        $this->member = $this->addMember($this->company);
+        StarterRoles::createFor($this->company);
+        $this->member = $this->addMember($this->company, role: $memberRole);
     }
 
-    protected function addMember(Company $company, ?User $user = null, string $status = CompanyUser::STATUS_ACTIVE): User
+    protected function addMember(Company $company, ?User $user = null, string $status = CompanyUser::STATUS_ACTIVE, ?string $role = null): User
     {
         $user ??= User::factory()->create();
-        CompanyUser::query()->create(['company_id' => $company->id, 'user_id' => $user->id, 'status' => $status, 'joined_at' => now()]);
+        $membership = CompanyUser::query()->create(['company_id' => $company->id, 'user_id' => $user->id, 'status' => $status, 'joined_at' => now()]);
+
+        if ($role !== null) {
+            StarterRoles::createFor($company);
+            StarterRoles::assign($membership->setRelation('company', $company), $role);
+        }
 
         return $user;
+    }
+
+    /**
+     * A new member of the test company holding the given starter role.
+     */
+    protected function memberWithRole(string $role): User
+    {
+        return $this->addMember($this->company, role: $role);
     }
 
     /**

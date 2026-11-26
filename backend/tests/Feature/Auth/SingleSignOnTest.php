@@ -3,27 +3,25 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Company;
-use App\Models\CompanyUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\InteractsWithCompany;
 use Tests\TestCase;
 
 class SingleSignOnTest extends TestCase
 {
-    use RefreshDatabase;
+    use InteractsWithCompany, RefreshDatabase;
 
     private User $admin;
-
-    private Company $company;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['email' => 'sarah@northstar.example']);
-        $this->company = Company::factory()->create();
-        CompanyUser::query()->create(['company_id' => $this->company->id, 'user_id' => $this->admin->id, 'status' => 'active']);
+        $this->setUpCompany();
+        $this->admin = $this->member;
+        $this->admin->update(['email' => 'sarah@northstar.example']);
     }
 
     /**
@@ -80,7 +78,7 @@ class SingleSignOnTest extends TestCase
         $this->configure();
 
         $other = Company::factory()->create();
-        CompanyUser::query()->create(['company_id' => $other->id, 'user_id' => $this->admin->id, 'status' => 'active']);
+        $this->addMember($other, $this->admin, role: 'owner');
 
         $this->actingAs($this->admin)->withHeader('X-Company-Id', $other->id)
             ->putJson('/api/company/sign-in-settings', ['require_mfa' => false, 'sso' => [

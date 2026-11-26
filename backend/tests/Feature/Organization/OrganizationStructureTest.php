@@ -40,7 +40,7 @@ class OrganizationStructureTest extends TestCase
         $this->inCompany()->postJson('/api/locations', ['code' => 'LDN', 'name' => 'Again', 'country_code' => 'GB'])->assertJsonValidationErrors('code');
 
         $other = Company::factory()->create();
-        $this->addMember($other, $this->member);
+        $this->addMember($other, $this->member, role: 'owner');
         $this->inCompany(company: $other)->postJson('/api/locations', ['code' => 'LDN', 'name' => 'London', 'country_code' => 'GB'])->assertCreated();
     }
 

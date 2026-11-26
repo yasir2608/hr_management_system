@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePlatformRole;
+use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\ResolveCompany;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'company' => ResolveCompany::class,
             'platform' => EnsurePlatformRole::class,
+            'permission' => RequirePermission::class,
         ]);
 
         // Company-scoped models are resolved by route model binding, so the company must be set first.

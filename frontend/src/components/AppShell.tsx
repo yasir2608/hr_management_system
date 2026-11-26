@@ -9,7 +9,7 @@ import { navGroups } from "./nav";
 import { initials } from "./ui";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { status, user, company, signOut } = useAuth();
+  const { status, user, company, signOut, can } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -55,7 +55,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const items = navGroups.flatMap((group) => group.items);
+  const groups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.permissions || can(...item.permissions)) }))
+    .filter((group) => group.items.length > 0);
+  const items = groups.flatMap((group) => group.items);
   const current = items.find((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
 
   return (
@@ -72,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <small>Company workspace</small>
           <strong>{company.name}</strong>
         </div>
-        {navGroups.map((group) => (
+        {groups.map((group) => (
           <nav className="navgroup" key={group.label} aria-label={group.label}>
             <div className="navlabel">{group.label}</div>
             {group.items.map((item) => (

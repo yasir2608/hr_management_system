@@ -1,5 +1,6 @@
 "use client";
 
+import { Guard } from "@/components/Guard";
 import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
 import { PreferencesTab } from "@/components/company/PreferencesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
@@ -18,7 +19,7 @@ const tabs = [
   { key: "preferences", label: "Leave & attendance", render: () => <PreferencesTab /> },
 ];
 
-export default function CompanySetupPage() {
+function CompanySetupPage() {
   const [active, setActive] = useTab(tabs.map((tab) => tab.key));
   const current = tabs.find((tab) => tab.key === active) ?? tabs[0];
 
@@ -34,5 +35,13 @@ export default function CompanySetupPage() {
       </div>
       {current.render()}
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Guard permissions={["company.settings.view", "company.settings.manage"]}>
+      <CompanySetupPage />
+    </Guard>
   );
 }

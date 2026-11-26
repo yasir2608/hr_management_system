@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
 use App\Http\Controllers\Auth\MfaSettingsController;
@@ -44,26 +45,41 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
 
-        Route::get('/company/setup-checklist', [SetupChecklistController::class, 'show']);
+        // Company setup
+        Route::middleware('permission:company.settings.view,company.settings.manage')->group(function (): void {
+            Route::get('/company/setup-checklist', [SetupChecklistController::class, 'show']);
+            Route::get('/company/profile', [CompanyProfileController::class, 'show']);
+            Route::get('/company/regional-settings', [RegionalSettingsController::class, 'show']);
+            Route::get('/company/preferences', [PreferencesController::class, 'show']);
+            Route::get('/company/payroll-countries', [PayrollCountryController::class, 'show']);
+            Route::get('/company/sign-in-settings', [SignInSettingsController::class, 'show']);
+        });
 
-        Route::get('/company/profile', [CompanyProfileController::class, 'show']);
-        Route::put('/company/profile', [CompanyProfileController::class, 'update']);
+        Route::middleware('permission:company.settings.manage')->group(function (): void {
+            Route::put('/company/profile', [CompanyProfileController::class, 'update']);
+            Route::put('/company/regional-settings', [RegionalSettingsController::class, 'update']);
+            Route::put('/company/preferences', [PreferencesController::class, 'update']);
+            Route::post('/company/preferences/skip', [PreferencesController::class, 'skip']);
+            Route::put('/company/payroll-countries', [PayrollCountryController::class, 'update']);
+            Route::put('/company/sign-in-settings', [SignInSettingsController::class, 'update']);
 
-        Route::get('/company/regional-settings', [RegionalSettingsController::class, 'show']);
-        Route::put('/company/regional-settings', [RegionalSettingsController::class, 'update']);
+            Route::apiResource('locations', LocationController::class)->only(['store', 'update', 'destroy']);
+            Route::apiResource('departments', DepartmentController::class)->only(['store', 'update', 'destroy']);
+            Route::apiResource('teams', TeamController::class)->only(['store', 'update', 'destroy']);
+        });
 
-        Route::get('/company/preferences', [PreferencesController::class, 'show']);
-        Route::put('/company/preferences', [PreferencesController::class, 'update']);
-        Route::post('/company/preferences/skip', [PreferencesController::class, 'skip']);
+        // Lists used by forms and filters across the app.
+        Route::middleware('permission:company.settings.view,company.settings.manage,employees.view,users.view')->group(function (): void {
+            Route::get('/locations', [LocationController::class, 'index']);
+            Route::get('/departments', [DepartmentController::class, 'index']);
+            Route::get('/teams', [TeamController::class, 'index']);
+        });
 
-        Route::get('/company/payroll-countries', [PayrollCountryController::class, 'show']);
-        Route::put('/company/payroll-countries', [PayrollCountryController::class, 'update']);
-
-        Route::apiResource('locations', LocationController::class)->except('show');
-        Route::apiResource('departments', DepartmentController::class)->except('show');
-        Route::apiResource('teams', TeamController::class)->except('show');
-
-        Route::get('/company/sign-in-settings', [SignInSettingsController::class, 'show']);
-        Route::put('/company/sign-in-settings', [SignInSettingsController::class, 'update']);
+        // Roles and permissions
+        Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:users.view,users.manage,roles.manage');
+        Route::middleware('permission:roles.manage')->group(function (): void {
+            Route::post('/roles', [RoleController::class, 'store']);
+            Route::put('/roles/{role}', [RoleController::class, 'update']);
+        });
     });
 });

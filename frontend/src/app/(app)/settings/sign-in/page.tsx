@@ -1,5 +1,6 @@
 "use client";
 
+import { Guard } from "@/components/Guard";
 import { useEffect, useState } from "react";
 import { Banner, Field, PageHead, Panel } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -18,7 +19,7 @@ type Settings = { require_mfa: boolean; sso: Sso | null };
 
 const blankSso: Sso = { protocol: "oidc", display_name: "", email_domain: "", login_url: "", client_id: "", is_enabled: false, is_enforced: false };
 
-export default function SignInSettingsPage() {
+function SignInSettingsPage() {
   const [requireMfa, setRequireMfa] = useState(false);
   const [sso, setSso] = useState<Sso>(blankSso);
   const [useSso, setUseSso] = useState(false);
@@ -114,5 +115,13 @@ export default function SignInSettingsPage() {
         </Panel>
       </div>
     </form>
+  );
+}
+
+export default function Page() {
+  return (
+    <Guard permissions={["company.settings.manage"]}>
+      <SignInSettingsPage />
+    </Guard>
   );
 }

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Access\Access;
 use App\Models\User;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -17,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CurrentCompany::class);
+        $this->app->scoped(Access::class);
     }
 
     /**

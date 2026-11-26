@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Access\Access;
 use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\CompanyUser;
@@ -59,6 +60,9 @@ class ResolveCompany
         if (! $membership->company->isActive()) {
             return $this->deny('This company account is suspended. Contact M.Y HRMS support.', 'COMPANY_SUSPENDED', 403);
         }
+
+        // Permissions are read fresh for every request, so role changes apply immediately.
+        app(Access::class)->forget();
 
         return $this->currentCompany->runAs($membership->company, fn (): Response => $next($request));
     }

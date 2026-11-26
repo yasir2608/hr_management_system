@@ -20,7 +20,13 @@ type AuthState = {
   signOut: () => Promise<void>;
   enterCompany: (companyId: string) => void;
   refresh: () => Promise<void>;
+  /** What the user may do in the open company (null while loading). */
+  access: CompanyAccess | null;
+  can: (...permissions: string[]) => boolean;
+  reloadAccess: () => Promise<void>;
 };
+
+export type CompanyAccess = { id: string; name: string; payroll_countries: string[]; roles: string[]; permissions: string[] };
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -30,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<SessionUser | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [access, setAccess] = useState<CompanyAccess | null>(null);
 
   const resetToGuest = useCallback(() => {
     session.clear();
@@ -123,6 +130,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetToGuest();
   }, [resetToGuest]);
 
+  const reloadAccess = useCallback(async () => {
+    if (!session.companyId()) return;
+    try {
+      setAccess(await api<CompanyAccess>("/company"));
+    } catch {
+      setAccess(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load permissions whenever the open company changes
+    setAccess(null);
+    if (status === "authenticated" && companyId) void reloadAccess();
+  }, [status, companyId, reloadAccess]);
+
+  const can = useCallback((...permissions: string[]) => permissions.some((permission) => access?.permissions.includes(permission) ?? false), [access]);
+
   const enterCompany = useCallback((id: string) => {
     session.setCompanyId(id);
     setCompanyId(id);
@@ -138,8 +162,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       enterCompany,
       refresh,
+      access,
+      can,
+      reloadAccess,
     }),
-    [status, user, companyId, signIn, verifyMfa, signOut, enterCompany, refresh],
+    [status, user, companyId, signIn, verifyMfa, signOut, enterCompany, refresh, access, can, reloadAccess],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
