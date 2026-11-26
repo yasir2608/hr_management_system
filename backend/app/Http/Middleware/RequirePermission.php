@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Access\Access;
+use App\Support\Activity;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,12 @@ class RequirePermission
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         if (! $this->access->canAny(...$permissions)) {
+            Activity::record('security.permission_denied', 'Refused an action the user has no permission for', null, [
+                'path' => $request->path(),
+                'method' => $request->method(),
+                'needed' => $permissions,
+            ]);
+
             return response()->json([
                 'message' => 'You do not have permission to do this. Ask your company administrator if you need access.',
                 'code' => 'PERMISSION_DENIED',

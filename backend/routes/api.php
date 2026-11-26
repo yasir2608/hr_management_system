@@ -23,6 +23,7 @@ use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [LoginController::class, 'store']);
@@ -50,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
+        Route::get('/search', SearchController::class)->middleware('throttle:60,1');
 
         // Company setup
         Route::middleware('permission:company.settings.view,company.settings.manage')->group(function (): void {

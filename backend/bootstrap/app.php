@@ -8,6 +8,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,4 +35,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Refusals look the same everywhere and never echo back the protected record.
+        $exceptions->render(fn (AccessDeniedHttpException $exception, Request $request) => $request->is('api/*')
+            ? response()->json(['message' => 'You do not have permission to do this. Ask your company administrator if you need access.', 'code' => 'PERMISSION_DENIED'], 403)
+            : null);
+
+        $exceptions->render(fn (NotFoundHttpException $exception, Request $request) => $request->is('api/*')
+            ? response()->json(['message' => 'We could not find that. It may have been removed, or you may not have access to it.', 'code' => 'NOT_FOUND'], 404)
+            : null);
     })->create();
