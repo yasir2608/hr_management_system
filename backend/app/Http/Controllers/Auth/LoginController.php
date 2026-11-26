@@ -59,6 +59,12 @@ class LoginController extends Controller
 
         RateLimiter::clear($throttleKey);
 
+        if (SsoController::enabledFor($user->email)?->is_enforced) {
+            LoginAttempt::record($request, $email, $user, LoginAttempt::REASON_SSO_REQUIRED);
+
+            return $this->fail('Your company requires you to sign in with single sign-on. Use "Continue with company SSO".', 'SSO_REQUIRED', 403);
+        }
+
         if ($multiFactor->isRequiredFor($user)) {
             $challenge = $multiFactor->issue($user, $request);
 

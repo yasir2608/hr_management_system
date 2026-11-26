@@ -29,6 +29,8 @@ class LoginAttempt extends Model
 
     public const REASON_WRONG_MFA_CODE = 'wrong_mfa_code';
 
+    public const REASON_SSO_REQUIRED = 'sso_required';
+
     /**
      * @return array<string, string>
      */

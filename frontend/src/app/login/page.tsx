@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Banner, Field } from "@/components/ui";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 function nextPath() {
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [sessionEnded, setSessionEnded] = useState(false);
   const [challenge, setChallenge] = useState<{ challengeId: string; message: string } | null>(null);
   const [code, setCode] = useState("");
+  const [ssoNotice, setSsoNotice] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -59,6 +60,29 @@ export default function LoginPage() {
     } catch (caught) {
       setError(asApiError(caught));
       setSubmitting(false);
+    }
+  }
+
+  async function continueWithSso() {
+    setError(null);
+    setSsoNotice(null);
+    if (!email) {
+      setSsoNotice("Enter your work email first, then choose Continue with company SSO.");
+      return;
+    }
+    try {
+      const result = await api<{ available: boolean; message?: string; display_name?: string; redirect_url?: string }>("/auth/sso/discover", {
+        body: { email },
+        noCompany: true,
+      });
+      if (result.available && result.redirect_url) {
+        setSsoNotice(`Opening ${result.display_name}…`);
+        window.location.assign(result.redirect_url);
+      } else {
+        setSsoNotice(result.message ?? "Single sign-on is not available for this email.");
+      }
+    } catch (caught) {
+      setError(asApiError(caught));
     }
   }
 
@@ -149,6 +173,10 @@ export default function LoginPage() {
           <button className="btn primary block" type="submit" disabled={submitting || !email || !password}>
             {submitting ? "Signing in…" : "Sign in"}
           </button>
+          <button className="btn block" type="button" onClick={() => void continueWithSso()} disabled={submitting}>
+            Continue with company SSO
+          </button>
+          {ssoNotice && <div className="tiny" style={{ textAlign: "center" }}>{ssoNotice}</div>}
         </div>
       </form>
     </div>
