@@ -11,6 +11,9 @@ use App\Http\Controllers\Company\CompanyProfileController;
 use App\Http\Controllers\Company\CurrentCompanyController;
 use App\Http\Controllers\Company\PayrollCountryController;
 use App\Http\Controllers\Company\SignInSettingsController;
+use App\Http\Controllers\Organization\DepartmentController;
+use App\Http\Controllers\Organization\LocationController;
+use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +46,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         Route::get('/company/payroll-countries', [PayrollCountryController::class, 'show']);
         Route::put('/company/payroll-countries', [PayrollCountryController::class, 'update']);
+
+        Route::apiResource('locations', LocationController::class)->except('show');
+        Route::apiResource('departments', DepartmentController::class)->except('show');
+        Route::apiResource('teams', TeamController::class)->except('show');
 
         Route::get('/company/sign-in-settings', [SignInSettingsController::class, 'show']);
         Route::put('/company/sign-in-settings', [SignInSettingsController::class, 'update']);

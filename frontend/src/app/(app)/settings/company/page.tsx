@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
+import { StructureTab } from "@/components/company/StructureTab";
 import { PageHead } from "@/components/ui";
 
 const tabs = [
   { key: "profile", label: "Company profile", render: () => <ProfileTab /> },
   { key: "countries", label: "Payroll countries", render: () => <PayrollCountriesTab /> },
+  { key: "structure", label: "Locations & teams", render: () => <StructureTab /> },
 ];
 
 export default function CompanySetupPage() {
