@@ -14,6 +14,7 @@ export const navGroups: NavGroup[] = [
     label: "Settings",
     items: [
       { href: "/settings/company", label: "Company setup", icon: "⚙", permissions: ["company.settings.view", "company.settings.manage"] },
+      { href: "/settings/users", label: "Users", icon: "◎", permissions: ["users.view", "users.manage"] },
       { href: "/settings/roles", label: "Roles & permissions", icon: "⚿", permissions: ["users.view", "users.manage", "roles.manage"] },
       { href: "/settings/sign-in", label: "Sign-in controls", icon: "⌑", permissions: ["company.settings.manage"] },
     ],

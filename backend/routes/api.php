@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Access\RoleController;
+use App\Http\Controllers\Access\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
 use App\Http\Controllers\Auth\MfaSettingsController;
@@ -74,6 +75,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/departments', [DepartmentController::class, 'index']);
             Route::get('/teams', [TeamController::class, 'index']);
         });
+
+        // Users with access to the company
+        Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
 
         // Roles and permissions
         Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:users.view,users.manage,roles.manage');
