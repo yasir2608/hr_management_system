@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Access\UserController;
+use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
 use App\Http\Controllers\Auth\MfaSettingsController;
@@ -26,6 +28,8 @@ Route::post('/auth/login', [LoginController::class, 'store']);
 Route::post('/auth/mfa/verify', [MfaController::class, 'verify'])->middleware('throttle:10,1');
 Route::post('/auth/sso/discover', [SsoController::class, 'discover'])->middleware('throttle:20,1');
 Route::post('/auth/register-company', [RegisterCompanyController::class, 'store'])->middleware('throttle:5,1');
+Route::get('/invitations/accept', [AcceptInvitationController::class, 'show'])->middleware('throttle:30,1');
+Route::post('/invitations/accept', [AcceptInvitationController::class, 'store'])->middleware('throttle:10,1');
 Route::post('/auth/forgot-password', [PasswordResetController::class, 'sendLink'])->middleware('throttle:6,1');
 Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:6,1');
 
@@ -78,6 +82,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
+        Route::get('/invitations', [InvitationController::class, 'index'])->middleware('permission:users.view,users.manage');
+        Route::post('/invitations', [InvitationController::class, 'store'])->middleware('permission:users.manage');
 
         // Roles and permissions
         Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:users.view,users.manage,roles.manage');

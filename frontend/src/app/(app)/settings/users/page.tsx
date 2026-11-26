@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
-import { Badge, EmptyState, formatDateTime, PageHead, Panel, Person, Stat, Table } from "@/components/ui";
+import { InviteModal } from "@/components/users/InviteModal";
+import { Badge, Banner, EmptyState, formatDateTime, PageHead, Panel, Person, Stat, Table } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { roleLabel, type UserRow } from "@/lib/users";
+
+type InvitationRow = { id: string; email: string; role: string; scope_type: string; status: string; expires_at: string; last_sent_at: string; send_count: number; invited_by: string | null };
 
 function UsersPage() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
@@ -12,11 +16,26 @@ function UsersPage() {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
 
+  const { can } = useAuth();
+  const canManage = can("users.manage");
+  const [invitations, setInvitations] = useState<InvitationRow[]>([]);
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [inviting, setInviting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
   const load = useCallback(async () => {
-    const result = await api<{ data: UserRow[]; counts: Record<string, number> }>("/users", { query: { status, search } });
+    const [result, pending] = await Promise.all([
+      api<{ data: UserRow[]; counts: Record<string, number> }>("/users", { query: { status, search } }),
+      api<{ data: InvitationRow[] }>("/invitations"),
+    ]);
     setUsers(result.data);
     setCounts(result.counts);
+    setInvitations(pending.data);
   }, [status, search]);
+
+  useEffect(() => {
+    if (canManage) api<{ data: { id: string; name: string }[] }>("/roles").then((result) => setRoles(result.data));
+  }, [canManage]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch when filters change
@@ -25,7 +44,41 @@ function UsersPage() {
 
   return (
     <>
-      <PageHead eyebrow="Settings" title="Users & permissions" subtitle="Invite people and give each person access appropriate to their responsibilities." />
+      <PageHead
+        eyebrow="Settings"
+        title="Users & permissions"
+        subtitle="Invite people and give each person access appropriate to their responsibilities."
+        actions={canManage && <button className="btn primary" onClick={() => setInviting(true)}>Invite user</button>}
+      />
+      {notice && <Banner tone="success">{notice}</Banner>}
+      {inviting && (
+        <InviteModal
+          roles={roles}
+          onClose={() => setInviting(false)}
+          onSent={(message) => {
+            setInviting(false);
+            setNotice(message);
+            void load();
+          }}
+        />
+      )}
+      {invitations.length > 0 && (
+        <div style={{ marginBottom: 15 }}>
+          <Panel title="Invitations" subtitle="Waiting for the person to accept." bodyless>
+            <Table headers={["Email", "Role", "Invited by", "Status", "Expires"]}>
+              {invitations.map((invitation) => (
+                <tr key={invitation.id}>
+                  <td><strong>{invitation.email}</strong></td>
+                  <td>{invitation.role}{invitation.scope_type !== "company" && <span className="tiny"> · limited</span>}</td>
+                  <td>{invitation.invited_by ?? "—"}</td>
+                  <td><Badge status={invitation.status} /></td>
+                  <td>{formatDateTime(invitation.expires_at)}</td>
+                </tr>
+              ))}
+            </Table>
+          </Panel>
+        </div>
+      )}
       <div className="grid stats">
         <Stat label="Active users" value={counts.active ?? 0} />
         <Stat label="Suspended" value={counts.suspended ?? 0} />
