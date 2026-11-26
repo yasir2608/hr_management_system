@@ -1,8 +1,16 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\SessionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::post('/auth/login', [LoginController::class, 'store']);
+
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('/auth/me', [SessionController::class, 'show']);
+    Route::post('/auth/logout', [LoginController::class, 'destroy']);
+
+    Route::middleware('company')->group(function (): void {
+        //
+    });
+});

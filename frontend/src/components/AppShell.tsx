@@ -1,0 +1,101 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { navGroups } from "./nav";
+import { initials } from "./ui";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { status, user, company, signOut } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (status === "guest") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [status, router, pathname]);
+
+  if (status !== "authenticated" || !user) return <div className="loadingpage">Loading your workspace…</div>;
+
+  if (!company) {
+    return (
+      <div className="authwrap">
+        <div className="panel authcard">
+          <div className="authhead">
+            <div className="logo" style={{ margin: "auto" }}>MY</div>
+            <h2>No company to open</h2>
+            <div className="tiny">Your account is not linked to an active company workspace. Contact your company administrator.</div>
+          </div>
+          <button className="btn block" onClick={() => void signOut()}>Sign out</button>
+        </div>
+      </div>
+    );
+  }
+
+  const items = navGroups.flatMap((group) => group.items);
+  const current = items.find((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+
+  return (
+    <div className="shell">
+      <aside className="side">
+        <div className="brand">
+          <div className="logo">MY</div>
+          <div>
+            <b>M.Y HRMS</b>
+            <small>People &amp; payroll</small>
+          </div>
+        </div>
+        <div className="company">
+          <small>Company workspace</small>
+          <strong>{company.name}</strong>
+        </div>
+        {navGroups.map((group) => (
+          <nav className="navgroup" key={group.label} aria-label={group.label}>
+            <div className="navlabel">{group.label}</div>
+            {group.items.map((item) => (
+              <Link key={item.href} href={item.href} className={`navitem${current?.href === item.href ? " active" : ""}`}>
+                <span className="ico">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ))}
+        <div className="sidefoot">Signed in as {user.email}</div>
+      </aside>
+      <main className="main">
+        <header className="top">
+          <div className="crumb">
+            {company.name} / <b>{current?.label ?? "Workspace"}</b>
+          </div>
+          <div className="topright" style={{ position: "relative" }}>
+            <span className="env">Demo environment</span>
+            <button className="userbtn" onClick={() => setMenuOpen((open) => !open)} aria-haspopup="menu" aria-expanded={menuOpen}>
+              <span className="avatar">{initials(user.name)}</span>
+            </button>
+            {menuOpen && (
+              <div className="menu" role="menu" onClick={() => setMenuOpen(false)}>
+                <div className="tiny" style={{ padding: "8px 10px" }}>
+                  <strong style={{ color: "var(--ink)" }}>{user.name}</strong>
+                  <br />
+                  {user.email}
+                </div>
+                <div className="divider" />
+                <button role="menuitem" onClick={() => void signOut()}>Sign out</button>
+              </div>
+            )}
+          </div>
+        </header>
+        <div className="content">{children}</div>
+        <div className="mobilebar">
+          <select aria-label="Choose screen" value={current?.href ?? ""} onChange={(event) => router.push(event.target.value)}>
+            {items.map((item) => (
+              <option key={item.href} value={item.href}>{item.label}</option>
+            ))}
+          </select>
+        </div>
+      </main>
+    </div>
+  );
+}

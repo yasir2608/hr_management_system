@@ -20,6 +20,15 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasUlids, Notifiable;
 
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_DISABLED = 'disabled';
+
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
     /**
      * @return HasMany<CompanyUser, $this>
      */
@@ -37,6 +46,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
