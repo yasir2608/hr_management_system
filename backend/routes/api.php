@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
+use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\LoginController;
@@ -83,7 +84,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
         Route::get('/invitations', [InvitationController::class, 'index'])->middleware('permission:users.view,users.manage');
-        Route::post('/invitations', [InvitationController::class, 'store'])->middleware('permission:users.manage');
+        Route::middleware('permission:users.manage')->group(function (): void {
+            Route::post('/invitations', [InvitationController::class, 'store']);
+            Route::post('/invitations/{invitation}/resend', [UserAccessController::class, 'resendInvitation']);
+            Route::delete('/invitations/{invitation}', [UserAccessController::class, 'revokeInvitation']);
+            Route::post('/users/{membership}/roles', [UserAccessController::class, 'addRole']);
+            Route::delete('/users/{membership}/roles/{assignment}', [UserAccessController::class, 'removeRole']);
+            Route::post('/users/{membership}/suspend', [UserAccessController::class, 'suspend']);
+            Route::post('/users/{membership}/reactivate', [UserAccessController::class, 'reactivate']);
+            Route::post('/users/{membership}/remove', [UserAccessController::class, 'remove']);
+        });
 
         // Roles and permissions
         Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:users.view,users.manage,roles.manage');

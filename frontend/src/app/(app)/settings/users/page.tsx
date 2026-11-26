@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { InviteModal } from "@/components/users/InviteModal";
+import { ManageUserModal } from "@/components/users/ManageUserModal";
 import { Badge, Banner, EmptyState, formatDateTime, PageHead, Panel, Person, Stat, Table } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { roleLabel, type UserRow } from "@/lib/users";
 
@@ -22,6 +23,7 @@ function UsersPage() {
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [inviting, setInviting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [managing, setManaging] = useState<UserRow | null>(null);
 
   const load = useCallback(async () => {
     const [result, pending] = await Promise.all([
@@ -32,6 +34,17 @@ function UsersPage() {
     setCounts(result.counts);
     setInvitations(pending.data);
   }, [status, search]);
+
+  async function act(path: string, method: "POST" | "DELETE") {
+    try {
+      const result = await api<{ message: string }>(path, { method });
+      setNotice(result.message);
+    } catch (caught) {
+      setNotice(caught instanceof ApiError ? caught.message : "That did not work.");
+    }
+    void load();
+  }
+
 
   useEffect(() => {
     if (canManage) api<{ data: { id: string; name: string }[] }>("/roles").then((result) => setRoles(result.data));
@@ -51,6 +64,18 @@ function UsersPage() {
         actions={canManage && <button className="btn primary" onClick={() => setInviting(true)}>Invite user</button>}
       />
       {notice && <Banner tone="success">{notice}</Banner>}
+      {managing && (
+        <ManageUserModal
+          user={managing}
+          roles={roles}
+          onClose={() => setManaging(null)}
+          onChanged={(message) => {
+            setManaging(null);
+            setNotice(message);
+            void load();
+          }}
+        />
+      )}
       {inviting && (
         <InviteModal
           roles={roles}
@@ -65,7 +90,7 @@ function UsersPage() {
       {invitations.length > 0 && (
         <div style={{ marginBottom: 15 }}>
           <Panel title="Invitations" subtitle="Waiting for the person to accept." bodyless>
-            <Table headers={["Email", "Role", "Invited by", "Status", "Expires"]}>
+            <Table headers={["Email", "Role", "Invited by", "Status", "Expires", ""]}>
               {invitations.map((invitation) => (
                 <tr key={invitation.id}>
                   <td><strong>{invitation.email}</strong></td>
@@ -73,6 +98,14 @@ function UsersPage() {
                   <td>{invitation.invited_by ?? "—"}</td>
                   <td><Badge status={invitation.status} /></td>
                   <td>{formatDateTime(invitation.expires_at)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {canManage && (
+                      <div className="row" style={{ justifyContent: "flex-end" }}>
+                        <button className="btn" onClick={() => void act(`/invitations/${invitation.id}/resend`, "POST")}>Resend</button>
+                        {invitation.status === "pending" && <button className="btn danger" onClick={() => void act(`/invitations/${invitation.id}`, "DELETE")}>Cancel</button>}
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </Table>
@@ -103,7 +136,7 @@ function UsersPage() {
         {users && users.length === 0 ? (
           <EmptyState title="No users match" />
         ) : (
-          <Table headers={["Person", "Roles", "Status", "Last sign-in"]}>
+          <Table headers={["Person", "Roles", "Status", "Last sign-in", ""]}>
             {users?.map((user) => (
               <tr key={user.id}>
                 <td><Person name={user.name} detail={user.email} /></td>
@@ -115,6 +148,7 @@ function UsersPage() {
                   {user.account_disabled && <> <Badge tone="red" label="Account disabled" /></>}
                 </td>
                 <td>{user.last_login_at ? formatDateTime(user.last_login_at) : <span className="muted">Never</span>}</td>
+                <td style={{ textAlign: "right" }}>{canManage && user.status !== "removed" && <button className="btn" onClick={() => setManaging(user)}>Manage</button>}</td>
               </tr>
             ))}
           </Table>
