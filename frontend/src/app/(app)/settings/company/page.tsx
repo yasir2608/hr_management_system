@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
 import { PageHead } from "@/components/ui";
 
-const tabs = [{ key: "profile", label: "Company profile", render: () => <ProfileTab /> }];
+const tabs = [
+  { key: "profile", label: "Company profile", render: () => <ProfileTab /> },
+  { key: "countries", label: "Payroll countries", render: () => <PayrollCountriesTab /> },
+];
 
 export default function CompanySetupPage() {
   const [active, setActive] = useState(tabs[0].key);

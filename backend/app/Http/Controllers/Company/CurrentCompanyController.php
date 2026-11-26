@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanyPayrollCountry;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 
@@ -21,6 +22,8 @@ class CurrentCompanyController extends Controller
             'name' => $company->name,
             'legal_name' => $company->legal_name,
             'country_code' => $company->country_code,
+            // Decides which payroll setup and reports the app offers.
+            'payroll_countries' => CompanyPayrollCountry::codes(),
         ]);
     }
 }
