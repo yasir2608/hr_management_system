@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { navGroups } from "./nav";
+import { SearchBox } from "./SearchBox";
 import { initials } from "./ui";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {company.name} / <b>{current?.label ?? "Workspace"}</b>
           </div>
           <div className="topright" style={{ position: "relative" }}>
+            <SearchBox />
             <span className="env">Demo environment</span>
             <button className="userbtn" onClick={() => setMenuOpen((open) => !open)} aria-haspopup="menu" aria-expanded={menuOpen}>
               <span className="avatar">{initials(user.name)}</span>
