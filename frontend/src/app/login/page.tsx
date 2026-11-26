@@ -14,7 +14,7 @@ function nextPath() {
 }
 
 export default function LoginPage() {
-  const { status, signIn } = useAuth();
+  const { status, company, signIn } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,8 +22,10 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status === "authenticated") router.replace(nextPath());
-  }, [status, router]);
+    if (status !== "authenticated") return;
+    // People in several companies choose one first; one company opens straight away.
+    router.replace(company ? nextPath() : "/select-company");
+  }, [status, company, router]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();

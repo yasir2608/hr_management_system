@@ -17,7 +17,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (status === "guest") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [status, router, pathname]);
 
-  if (status !== "authenticated" || !user) return <div className="loadingpage">Loading your workspace…</div>;
+  const mustChoose = status === "authenticated" && !company && (user?.companies.some((choice) => choice.can_enter) ?? false);
+
+  useEffect(() => {
+    if (mustChoose) router.replace("/select-company");
+  }, [mustChoose, router]);
+
+  if (status !== "authenticated" || !user || mustChoose) return <div className="loadingpage">Loading your workspace…</div>;
 
   if (!company) {
     return (
@@ -82,6 +88,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {user.email}
                 </div>
                 <div className="divider" />
+                {user.companies.length > 1 && (
+                  <Link role="menuitem" href="/select-company">Switch company</Link>
+                )}
                 <button role="menuitem" onClick={() => void signOut()}>Sign out</button>
               </div>
             )}
