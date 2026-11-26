@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
+import { PreferencesTab } from "@/components/company/PreferencesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
 import { RegionalTab } from "@/components/company/RegionalTab";
 import { StructureTab } from "@/components/company/StructureTab";
@@ -12,6 +13,7 @@ const tabs = [
   { key: "countries", label: "Payroll countries", render: () => <PayrollCountriesTab /> },
   { key: "structure", label: "Locations & teams", render: () => <StructureTab /> },
   { key: "regional", label: "Regional settings", render: () => <RegionalTab /> },
+  { key: "preferences", label: "Leave & attendance", render: () => <PreferencesTab /> },
 ];
 
 export default function CompanySetupPage() {

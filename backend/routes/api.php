@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\Company\CompanyProfileController;
 use App\Http\Controllers\Company\CurrentCompanyController;
 use App\Http\Controllers\Company\PayrollCountryController;
+use App\Http\Controllers\Company\PreferencesController;
 use App\Http\Controllers\Company\RegionalSettingsController;
 use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Organization\DepartmentController;
@@ -47,6 +48,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         Route::get('/company/regional-settings', [RegionalSettingsController::class, 'show']);
         Route::put('/company/regional-settings', [RegionalSettingsController::class, 'update']);
+
+        Route::get('/company/preferences', [PreferencesController::class, 'show']);
+        Route::put('/company/preferences', [PreferencesController::class, 'update']);
+        Route::post('/company/preferences/skip', [PreferencesController::class, 'skip']);
 
         Route::get('/company/payroll-countries', [PayrollCountryController::class, 'show']);
         Route::put('/company/payroll-countries', [PayrollCountryController::class, 'update']);
