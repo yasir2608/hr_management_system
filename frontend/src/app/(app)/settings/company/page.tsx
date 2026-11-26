@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
 import { PreferencesTab } from "@/components/company/PreferencesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
 import { RegionalTab } from "@/components/company/RegionalTab";
+import { SetupChecklist } from "@/components/company/SetupChecklist";
 import { StructureTab } from "@/components/company/StructureTab";
 import { PageHead } from "@/components/ui";
+import { useTab } from "@/lib/useTab";
 
 const tabs = [
+  { key: "checklist", label: "Setup checklist", render: () => <SetupChecklist /> },
   { key: "profile", label: "Company profile", render: () => <ProfileTab /> },
   { key: "countries", label: "Payroll countries", render: () => <PayrollCountriesTab /> },
   { key: "structure", label: "Locations & teams", render: () => <StructureTab /> },
@@ -17,7 +19,7 @@ const tabs = [
 ];
 
 export default function CompanySetupPage() {
-  const [active, setActive] = useState(tabs[0].key);
+  const [active, setActive] = useTab(tabs.map((tab) => tab.key));
   const current = tabs.find((tab) => tab.key === active) ?? tabs[0];
 
   return (

@@ -12,6 +12,7 @@ use App\Http\Controllers\Company\CurrentCompanyController;
 use App\Http\Controllers\Company\PayrollCountryController;
 use App\Http\Controllers\Company\PreferencesController;
 use App\Http\Controllers\Company\RegionalSettingsController;
+use App\Http\Controllers\Company\SetupChecklistController;
 use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
@@ -42,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
+
+        Route::get('/company/setup-checklist', [SetupChecklistController::class, 'show']);
 
         Route::get('/company/profile', [CompanyProfileController::class, 'show']);
         Route::put('/company/profile', [CompanyProfileController::class, 'update']);
