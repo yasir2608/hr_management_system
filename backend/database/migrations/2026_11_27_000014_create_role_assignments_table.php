@@ -23,14 +23,18 @@ return new class extends Migration
             $table->timestamps();
 
             // At most one active assignment per member + role + scope.
-            $table->string('active_key', 100)->nullable()->storedAs(
-                "IF(`revoked_at` IS NULL, CONCAT_WS('|', `company_user_id`, `role_id`, `scope_type`, IFNULL(`scope_id`, '-')), NULL)"
-            );
+            $table->string('active_key', 100)->nullable()->storedAs($this->portable("IF(`revoked_at` IS NULL, CONCAT_WS('|', `company_user_id`, `role_id`, `scope_type`, IFNULL(`scope_id`, '-')), NULL)"));
 
             $table->unique(['company_id', 'active_key']);
             $table->index(['company_id', 'company_user_id', 'revoked_at']);
             $table->index(['company_id', 'scope_type', 'scope_id']);
         });
+    }
+
+    // Generated-column SQL is written for MySQL; SQLite (the test database) spells IF() as IIF().
+    private function portable(string $expression): string
+    {
+        return DB::getDriverName() === 'sqlite' ? str_replace('IF(', 'IIF(', $expression) : $expression;
     }
 
     public function down(): void

@@ -5,10 +5,16 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    // Requires the TRIGGER privilege. With binary logging enabled, MySQL may also
-    // need log_bin_trust_function_creators = 1 (or SUPER) to create triggers.
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite is only used by the test suite; same guarantee, SQLite syntax.
+            DB::unprepared("CREATE TRIGGER activity_log_block_update BEFORE UPDATE ON activity_log BEGIN SELECT RAISE(ABORT, 'activity_log is append-only: UPDATE is not allowed'); END");
+            DB::unprepared("CREATE TRIGGER activity_log_block_delete BEFORE DELETE ON activity_log BEGIN SELECT RAISE(ABORT, 'activity_log is append-only: DELETE is not allowed'); END");
+
+            return;
+        }
+
         DB::unprepared(<<<'SQL'
             CREATE TRIGGER `activity_log_block_update` BEFORE UPDATE ON `activity_log`
             FOR EACH ROW

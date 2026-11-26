@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreignUlid('changed_by')->nullable()->constrained('users');
             $table->timestamps();
 
-            $table->boolean('is_current')->nullable()->storedAs('IF(`valid_to` IS NULL, 1, NULL)');
+            $table->boolean('is_current')->nullable()->storedAs($this->portable('IF(`valid_to` IS NULL, 1, NULL)'));
 
             // Explicit names: generated ones exceed MySQL's 64-character identifier limit.
             $table->unique(['company_id', 'employee_id', 'valid_from'], 'emp_location_hist_valid_from_unique');
@@ -31,7 +31,15 @@ return new class extends Migration
             $table->index(['company_id', 'location_id', 'valid_to'], 'emp_location_hist_location_valid_to_index');
         });
 
-        DB::statement('ALTER TABLE `employee_location_history` ADD CONSTRAINT `employee_location_history_valid_range_check` CHECK (`valid_to` IS NULL OR `valid_to` > `valid_from`)');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE `employee_location_history` ADD CONSTRAINT `employee_location_history_valid_range_check` CHECK (`valid_to` IS NULL OR `valid_to` > `valid_from`)');
+        }
+    }
+
+    // Generated-column SQL is written for MySQL; SQLite (the test database) spells IF() as IIF().
+    private function portable(string $expression): string
+    {
+        return DB::getDriverName() === 'sqlite' ? str_replace('IF(', 'IIF(', $expression) : $expression;
     }
 
     public function down(): void

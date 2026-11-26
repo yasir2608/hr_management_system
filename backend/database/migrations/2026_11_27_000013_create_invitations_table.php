@@ -28,12 +28,18 @@ return new class extends Migration
 
             // At most one pending invitation per email per company.
             $table->string('pending_email')->nullable()
-                ->storedAs("IF(`status` = 'pending', `email`, NULL)");
+                ->storedAs($this->portable("IF(`status` = 'pending', `email`, NULL)"));
 
             $table->unique(['company_id', 'pending_email']);
             $table->index(['company_id', 'email']);
             $table->index(['company_id', 'status']);
         });
+    }
+
+    // Generated-column SQL is written for MySQL; SQLite (the test database) spells IF() as IIF().
+    private function portable(string $expression): string
+    {
+        return DB::getDriverName() === 'sqlite' ? str_replace('IF(', 'IIF(', $expression) : $expression;
     }
 
     public function down(): void
