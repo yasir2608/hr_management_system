@@ -18,6 +18,8 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+const COMPANY_ACCESS_CODES = ["COMPANY_ACCESS_DENIED", "MEMBERSHIP_SUSPENDED", "COMPANY_SUSPENDED", "COMPANY_REQUIRED"];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -69,9 +71,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
           resetToGuest();
+          return;
+        }
+        // Access to the open company was refused (removed, suspended, or a tampered id):
+        // leave the company and send the person back to the picker with the reason.
+        if (error.code && COMPANY_ACCESS_CODES.includes(error.code)) {
+          try {
+            window.sessionStorage.setItem("myhrms.companyNotice", error.message);
+          } catch {
+            /* ignore */
+          }
+          session.setCompanyId(null);
+          setCompanyId(null);
+          void refresh();
         }
       }),
-    [resetToGuest],
+    [resetToGuest, refresh],
   );
 
   const signIn = useCallback(

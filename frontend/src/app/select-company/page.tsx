@@ -22,6 +22,19 @@ export default function SelectCompanyPage() {
   const [opening, setOpening] = useState<string | null>(null);
 
   useEffect(() => {
+    try {
+      const notice = window.sessionStorage.getItem("myhrms.companyNotice");
+      if (notice) {
+        window.sessionStorage.removeItem("myhrms.companyNotice");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from browser storage
+        setError(notice);
+      }
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
+  useEffect(() => {
     if (status === "guest") router.replace("/login");
   }, [status, router]);
 

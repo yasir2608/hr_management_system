@@ -48,6 +48,20 @@ trait CreatesTenancyTables
             $table->unique(['company_id', 'user_id']);
         });
 
+        Schema::create('activity_log', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('company_id')->nullable();
+            $table->foreignUlid('actor_user_id')->nullable();
+            $table->string('action', 100);
+            $table->string('subject_type', 100)->nullable();
+            $table->ulid('subject_id')->nullable();
+            $table->string('description', 500);
+            $table->json('properties')->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->timestamp('created_at', 6)->useCurrent();
+        });
+
         Schema::create('scoped_records', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('company_id')->constrained();

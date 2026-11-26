@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ActivityLog;
+use App\Models\Company;
 use App\Models\CompanyUser;
 use App\Tenancy\CurrentCompany;
 use Closure;
@@ -45,6 +47,8 @@ class ResolveCompany
             : null;
 
         if ($membership === null || $membership->status === CompanyUser::STATUS_REMOVED) {
+            $this->recordBlockedAttempt($request, $companyId);
+
             return $this->deny('You do not have access to this company.', 'COMPANY_ACCESS_DENIED', 403);
         }
 
@@ -57,6 +61,25 @@ class ResolveCompany
         }
 
         return $this->currentCompany->runAs($membership->company, fn (): Response => $next($request));
+    }
+
+    /**
+     * Keeps a security record of an attempt to open a company the user has no access to.
+     * When the id belongs to a real company, that company can see the attempt in its history.
+     */
+    private function recordBlockedAttempt(Request $request, string $companyId): void
+    {
+        $exists = Str::isUlid($companyId) && Company::query()->whereKey($companyId)->exists();
+
+        ActivityLog::query()->create([
+            'company_id' => $exists ? $companyId : null,
+            'actor_user_id' => $request->user()->getAuthIdentifier(),
+            'action' => 'security.company_access_blocked',
+            'description' => 'Blocked an attempt to open a company without access',
+            'properties' => ['requested_company_id' => Str::limit($companyId, 40, ''), 'path' => $request->path()],
+            'ip_address' => $request->ip(),
+            'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+        ]);
     }
 
     private function deny(string $message, string $code, int $status): JsonResponse
