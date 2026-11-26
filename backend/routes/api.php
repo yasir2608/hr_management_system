@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterCompanyController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\Auth\SsoController;
+use App\Http\Controllers\Company\CompanyProfileController;
 use App\Http\Controllers\Company\CurrentCompanyController;
 use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
@@ -35,6 +36,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
+
+        Route::get('/company/profile', [CompanyProfileController::class, 'show']);
+        Route::put('/company/profile', [CompanyProfileController::class, 'update']);
 
         Route::get('/company/sign-in-settings', [SignInSettingsController::class, 'show']);
         Route::put('/company/sign-in-settings', [SignInSettingsController::class, 'update']);
