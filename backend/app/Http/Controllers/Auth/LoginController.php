@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Auth\MultiFactor;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SessionUserResource;
 use App\Models\LoginAttempt;
@@ -18,7 +19,7 @@ class LoginController extends Controller
 
     public const LOCKOUT_SECONDS = 900;
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, MultiFactor $multiFactor): JsonResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
@@ -57,7 +58,26 @@ class LoginController extends Controller
         }
 
         RateLimiter::clear($throttleKey);
-        LoginAttempt::record($request, $email, $user);
+
+        if ($multiFactor->isRequiredFor($user)) {
+            $challenge = $multiFactor->issue($user, $request);
+
+            return response()->json([
+                'mfa_required' => true,
+                'challenge_id' => $challenge->id,
+                'message' => 'We sent a 6-digit code to '.self::maskEmail($user->email).'. Enter it to finish signing in.',
+            ]);
+        }
+
+        return self::completeSignIn($request, $user);
+    }
+
+    /**
+     * Records the successful sign-in and issues the session token.
+     */
+    public static function completeSignIn(Request $request, User $user): JsonResponse
+    {
+        LoginAttempt::record($request, $user->email, $user);
 
         $user->forceFill(['last_login_at' => now()])->save();
         $token = $user->createToken('web')->plainTextToken;
@@ -66,6 +86,13 @@ class LoginController extends Controller
             'token' => $token,
             'user' => new SessionUserResource($user),
         ]);
+    }
+
+    public static function maskEmail(string $email): string
+    {
+        [$name, $domain] = explode('@', $email, 2) + [1 => ''];
+
+        return substr($name, 0, 1).str_repeat('•', max(strlen($name) - 1, 2)).'@'.$domain;
     }
 
     /**

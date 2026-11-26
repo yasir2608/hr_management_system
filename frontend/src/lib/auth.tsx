@@ -6,11 +6,17 @@ import type { CompanyChoice, SessionUser } from "./types";
 
 type Status = "loading" | "guest" | "authenticated";
 
+type SignInResponse = { token: string; user: SessionUser } | { mfa_required: true; challenge_id: string; message: string };
+
+/** Either signed in, or a code is needed to finish signing in. */
+export type SignInResult = { user: SessionUser; mfa?: undefined } | { mfa: { challengeId: string; message: string }; user?: undefined };
+
 type AuthState = {
   status: Status;
   user: SessionUser | null;
   company: CompanyChoice | null;
-  signIn: (email: string, password: string) => Promise<SessionUser>;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
+  verifyMfa: (challengeId: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
   enterCompany: (companyId: string) => void;
   refresh: () => Promise<void>;
@@ -90,14 +96,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signIn = useCallback(
-    async (email: string, password: string) => {
-      const result = await api<{ token: string; user: SessionUser }>("/auth/login", {
-        body: { email, password },
+    async (email: string, password: string): Promise<SignInResult> => {
+      const result = await api<SignInResponse>("/auth/login", { body: { email, password }, noCompany: true });
+      if ("mfa_required" in result) return { mfa: { challengeId: result.challenge_id, message: result.message } };
+      session.setToken(result.token);
+      adopt(result.user);
+      return { user: result.user };
+    },
+    [adopt],
+  );
+
+  const verifyMfa = useCallback(
+    async (challengeId: string, code: string) => {
+      const result = await api<{ token: string; user: SessionUser }>("/auth/mfa/verify", {
+        body: { challenge_id: challengeId, code },
         noCompany: true,
       });
       session.setToken(result.token);
       adopt(result.user);
-      return result.user;
     },
     [adopt],
   );
@@ -118,11 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       company: user?.companies.find((company) => company.id === companyId) ?? null,
       signIn,
+      verifyMfa,
       signOut,
       enterCompany,
       refresh,
     }),
-    [status, user, companyId, signIn, signOut, enterCompany, refresh],
+    [status, user, companyId, signIn, verifyMfa, signOut, enterCompany, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

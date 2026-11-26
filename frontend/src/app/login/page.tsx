@@ -13,14 +13,20 @@ function nextPath() {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 }
 
+function asApiError(caught: unknown) {
+  return caught instanceof ApiError ? caught : new ApiError("Something went wrong. Please try again.", 0);
+}
+
 export default function LoginPage() {
-  const { status, company, signIn } = useAuth();
+  const { status, company, signIn, verifyMfa } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [challenge, setChallenge] = useState<{ challengeId: string; message: string } | null>(null);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     try {
@@ -45,11 +51,68 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      if (result.mfa) {
+        setChallenge(result.mfa);
+        setSubmitting(false);
+      }
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught : new ApiError("Something went wrong. Please try again.", 0));
+      setError(asApiError(caught));
       setSubmitting(false);
     }
+  }
+
+  async function submitCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (!challenge) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await verifyMfa(challenge.challengeId, code);
+    } catch (caught) {
+      const apiError = asApiError(caught);
+      setError(apiError);
+      setSubmitting(false);
+      if (apiError.code === "MFA_CHALLENGE_EXPIRED") {
+        setChallenge(null);
+        setCode("");
+      }
+    }
+  }
+
+  if (challenge) {
+    return (
+      <div className="authwrap">
+        <form className="panel authcard" onSubmit={submitCode} noValidate>
+          <div className="authhead">
+            <div className="logo" style={{ margin: "auto" }}>MY</div>
+            <h2>Verify your sign-in</h2>
+            <div className="tiny">{challenge.message}</div>
+          </div>
+          {error && <Banner tone="error">{error.message}</Banner>}
+          <div className="stack">
+            <Field label="6-digit code" error={error?.errors.code?.[0]}>
+              <input
+                className="input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+                style={{ letterSpacing: 6, fontSize: 18, textAlign: "center" }}
+                autoFocus
+              />
+            </Field>
+            <button className="btn primary block" type="submit" disabled={submitting || code.length !== 6}>
+              {submitting ? "Checking…" : "Verify and sign in"}
+            </button>
+            <button type="button" className="link" style={{ textAlign: "center" }} onClick={() => { setChallenge(null); setCode(""); setError(null); }}>
+              Use a different account
+            </button>
+          </div>
+        </form>
+      </div>
+    );
   }
 
   return (

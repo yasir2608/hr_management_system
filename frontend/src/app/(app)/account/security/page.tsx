@@ -38,6 +38,17 @@ export default function SecurityPage() {
       .catch((caught) => setError(caught instanceof ApiError ? caught.message : "Could not load sign-in activity."));
   }, []);
 
+  const [mfa, setMfa] = useState<{ mfa_enabled: boolean; required_by_company: boolean } | null>(null);
+
+  useEffect(() => {
+    api<{ mfa_enabled: boolean; required_by_company: boolean }>("/auth/mfa", { noCompany: true }).then(setMfa).catch(() => undefined);
+  }, []);
+
+  async function toggleMfa(enabled: boolean) {
+    setMfa(await api("/auth/mfa", { method: "PUT", body: { mfa_enabled: enabled }, noCompany: true }));
+    setNotice(enabled ? "Two-step verification is on. You will be asked for a code next time you sign in." : "Two-step verification is off.");
+  }
+
   async function signOutOthers() {
     const result = await api<{ message: string }>("/auth/logout-others", { method: "POST", noCompany: true });
     setNotice(result.message);
@@ -53,6 +64,20 @@ export default function SecurityPage() {
       />
       {notice && <Banner tone="success">{notice}</Banner>}
       {error && <Banner tone="error">{error}</Banner>}
+      <div style={{ marginBottom: 15 }}>
+        <Panel title="Two-step verification" subtitle="Ask for a 6-digit code from your email each time you sign in.">
+          {mfa === null ? (
+            <span className="muted">Loading…</span>
+          ) : mfa.required_by_company ? (
+            <div className="callout blue">One of your companies requires two-step verification, so it is always on for your account.</div>
+          ) : (
+            <label className="checkrow">
+              <input type="checkbox" checked={mfa.mfa_enabled} onChange={(event) => void toggleMfa(event.target.checked)} />
+              Require a sign-in code sent to my email
+            </label>
+          )}
+        </Panel>
+      </div>
       <Panel title="Recent sign-in activity" subtitle="The last 50 attempts, newest first." bodyless>
         {attempts === null && !error ? (
           <div className="empty">Loading…</div>

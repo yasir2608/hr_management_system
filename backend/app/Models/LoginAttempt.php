@@ -27,6 +27,8 @@ class LoginAttempt extends Model
 
     public const REASON_LOCKED = 'too_many_attempts';
 
+    public const REASON_WRONG_MFA_CODE = 'wrong_mfa_code';
+
     /**
      * @return array<string, string>
      */
