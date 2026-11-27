@@ -5,6 +5,7 @@ use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
+use App\Http\Controllers\Approvals\ApprovalController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
@@ -159,6 +160,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/onboarding/tasks/{task}/review', [EmployeeOnboardingController::class, 'review']);
         Route::get('/me/onboarding', [EmployeeOnboardingController::class, 'mine']);
         Route::post('/me/onboarding/tasks/{task}', [EmployeeOnboardingController::class, 'submit'])->middleware('throttle:20,1');
+
+        // Approvals (shared by leave, attendance, invoices and payroll)
+        Route::get('/approvals/{approval}', [ApprovalController::class, 'show'])->whereUlid('approval');
+        Route::post('/approvals/{approval}/decide', [ApprovalController::class, 'decide'])->whereUlid('approval');
+        Route::post('/approvals/{approval}/info', [ApprovalController::class, 'provideInfo'])->whereUlid('approval');
+        Route::post('/approvals/{approval}/reassign', [ApprovalController::class, 'reassign'])->whereUlid('approval');
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
