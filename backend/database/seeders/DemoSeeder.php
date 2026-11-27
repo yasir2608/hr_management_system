@@ -7,6 +7,7 @@ use App\Access\StarterRoles;
 use App\Employees\EmployeeRecord;
 use App\Models\Company;
 use App\Models\CompanyPayrollCountry;
+use App\Models\CompanyPreference;
 use App\Models\CompanySetting;
 use App\Models\CompanyUser;
 use App\Models\Department;
