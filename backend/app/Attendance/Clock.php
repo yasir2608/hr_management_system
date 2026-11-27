@@ -49,7 +49,8 @@ class Clock
 
             return AttendanceRecord::query()->create([
                 'employee_id' => $employee->id,
-                'clock_in_at' => now(),
+                ...self::stamp('clock_in', $this->timezone($employee)),
+                'work_date' => now($this->timezone($employee))->toDateString(),
                 'source' => 'web',
                 'note' => $note,
                 'clock_in_ip' => $request->ip(),
@@ -71,7 +72,7 @@ class Clock
         }
 
         $open->forceFill([
-            'clock_out_at' => now(),
+            ...self::stamp('clock_out', $this->timezone($employee)),
             'clock_out_ip' => $request->ip(),
             'note' => trim(($open->note ? $open->note.' · ' : '').($note ?? '')) ?: null,
         ])->save();
@@ -103,11 +104,29 @@ class Clock
             'id' => $record->id,
             'clock_in_at' => $record->clock_in_at->toIso8601String(),
             'clock_out_at' => $record->clock_out_at?->toIso8601String(),
-            'clock_in_local' => $record->clock_in_at->setTimezone($timezone)->format('Y-m-d H:i'),
-            'clock_out_local' => $record->clock_out_at?->setTimezone($timezone)->format('Y-m-d H:i'),
+            'clock_in_local' => $record->localClockIn()?->format('Y-m-d H:i'),
+            'clock_in_timezone' => $record->clock_in_timezone ?? $timezone,
+            'work_date' => $record->work_date?->toDateString(),
+            'clock_out_local' => $record->localClockOut()?->format('Y-m-d H:i'),
             'minutes' => $record->minutes(),
             'source' => $record->source,
             'note' => $record->note,
+        ];
+    }
+
+    /**
+     * The moment, plus the time zone and UTC offset in force at that moment.
+     *
+     * @return array<string, mixed>
+     */
+    public static function stamp(string $prefix, string $timezone): array
+    {
+        $now = now();
+
+        return [
+            "{$prefix}_at" => $now,
+            "{$prefix}_timezone" => $timezone,
+            "{$prefix}_utc_offset" => $now->copy()->setTimezone($timezone)->utcOffset(),
         ];
     }
 

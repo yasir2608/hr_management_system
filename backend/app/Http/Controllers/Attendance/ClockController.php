@@ -27,7 +27,7 @@ class ClockController extends Controller
 
         return response()->json([
             ...$this->clock->status($employee),
-            'message' => 'Clocked in at '.$record->clock_in_at->setTimezone($timezone)->format('H:i').' ('.$timezone.').',
+            'message' => 'Clocked in at '.$record->localClockIn()->format('H:i').' ('.$record->clock_in_timezone.').',
         ], 201);
     }
 
@@ -41,7 +41,7 @@ class ClockController extends Controller
 
         return response()->json([
             ...$this->clock->status($employee),
-            'message' => 'Clocked out at '.$record->clock_out_at->setTimezone($timezone)->format('H:i').sprintf('. Shift: %dh %02dm.', intdiv($minutes, 60), $minutes % 60),
+            'message' => 'Clocked out at '.$record->localClockOut()->format('H:i').sprintf('. Shift: %dh %02dm.', intdiv($minutes, 60), $minutes % 60),
         ]);
     }
 

@@ -19,9 +19,9 @@ class AlreadyClockedIn extends RuntimeException
 
     public function render(): JsonResponse
     {
-        $since = $this->open->clock_in_at->setTimezone($this->timezone);
+        $since = $this->open->localClockIn() ?? $this->open->clock_in_at->setTimezone($this->timezone);
         $minutes = $this->open->minutes();
-        $startedToday = $since->isSameDay(now($this->timezone));
+        $startedToday = $since->toDateString() === now($this->open->clock_in_timezone ?? $this->timezone)->toDateString();
 
         $message = $startedToday
             ? sprintf('You are already clocked in since %s (%dh %02dm ago). Clock out when you finish.', $since->format('H:i'), intdiv($minutes, 60), $minutes % 60)
