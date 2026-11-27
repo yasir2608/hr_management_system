@@ -13,8 +13,8 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 /**
  * Sidebar from docs/full_scope_visualization.html: two groups, Workspace and Administration, in the design's order
- * and with its icons. Design items whose screens are not built yet (Team, Approvals, Payslips, Reports, Bank
- * exports) are added as their chunks are built.
+ * and with its icons. Design items whose screens are not built yet (Team, Approvals, Reports, Bank exports) are
+ * added as their chunks are built.
  */
 export const navGroups: NavGroup[] = [
   {
@@ -44,6 +44,7 @@ export const navGroups: NavGroup[] = [
         href: "/payroll/runs", label: "Payroll", icon: "＄", permissions: ["payroll.view", "payroll.run"],
         matches: ["/payroll/readiness", "/payroll/groups", "/payroll/rules", "/payroll/settings"],
         children: [
+          { href: "/payroll/payslips", label: "Payslips", icon: "▧", permissions: ["payslips.manage", "payroll.view"] },
           { href: "/payroll/readiness", label: "Readiness", icon: "✓", permissions: ["payroll.view", "payroll.settings.manage", "payroll.run"] },
           { href: "/payroll/groups", label: "Payroll groups", icon: "▦", permissions: ["payroll.view", "payroll.settings.manage"] },
           { href: "/payroll/rules", label: "Tax rules", icon: "§", permissions: ["payroll.view", "payroll.settings.manage"] },

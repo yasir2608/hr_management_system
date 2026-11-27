@@ -58,6 +58,7 @@ use App\Http\Controllers\Payroll\PayrollReadinessController;
 use App\Http\Controllers\Payroll\PayrollRulesController;
 use App\Http\Controllers\Payroll\PayrollRunController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
+use App\Http\Controllers\Payroll\PayslipController;
 use App\Http\Controllers\Payroll\RunIssueController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
@@ -291,6 +292,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         });
 
         // Payroll
+        Route::middleware('permission:payslips.manage,payroll.view')->group(function (): void {
+            Route::get('/payroll/payslips', [PayslipController::class, 'index']);
+            Route::get('/payroll/payslips/{payslip}', [PayslipController::class, 'show'])->whereUlid('payslip');
+            Route::get('/payroll/runs/{run}/payslips', [PayslipController::class, 'forRun'])->whereUlid('run');
+        });
         Route::middleware('permission:payroll.view,payroll.settings.manage')->group(function (): void {
             Route::get('/payroll/settings', [PayrollSettingsController::class, 'index']);
             Route::get('/payroll/groups', [PayrollGroupController::class, 'index']);

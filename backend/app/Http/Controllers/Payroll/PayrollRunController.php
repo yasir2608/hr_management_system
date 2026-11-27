@@ -8,6 +8,7 @@ use App\Models\CompanySetting;
 use App\Models\PayrollGroup;
 use App\Models\PayrollRun;
 use App\Models\PayrollRunEmployee;
+use App\Models\Payslip;
 use App\Payroll\ApproveRun;
 use App\Payroll\CalculateRun;
 use App\Payroll\CreateCorrection;
@@ -100,6 +101,7 @@ class PayrollRunController extends Controller
         return response()->json([
             ...$this->summary($run->loadCount(['lines as employee_count', 'lines as excluded_count' => fn ($query) => $query->where('included', false)])),
             'company_name' => app(CurrentCompany::class)->get()?->name,
+            'payslip_count' => Payslip::query()->where('payroll_run_id', $run->id)->count(),
             'correction' => [
                 'reason' => $run->correction_reason,
                 'corrects' => $run->corrects?->only(['id', 'status', 'kind']),

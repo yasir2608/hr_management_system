@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { AdjustmentPanel, CorrectionBanners, CorrectRunModal, type Correction } from "@/components/payroll/Corrections";
 import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
+import { RunPayslipsPanel } from "@/components/payroll/Payslip";
 import { RecalculationChanges } from "@/components/payroll/RecalculationChanges";
 import { RunComparisonPanel } from "@/components/payroll/RunComparisonPanel";
 import { RunIssuesPanel, type IssueSummary } from "@/components/payroll/RunIssuesPanel";
@@ -27,7 +28,7 @@ type Run = {
   id: string; status: string; country_code: string; country_name: string; currency: string; pay_frequency: string;
   group: { id: string; name: string } | null; period_start: string; period_end: string; pay_date: string;
   employee_count: number; excluded_count: number; created_by: string | null; inputs_gathered_at: string | null;
-  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null; kind: string; correction: Correction;
+  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null; kind: string; correction: Correction; payslip_count: number;
   approval: { requires_second_review: boolean; prepared_by_id: string | null; second_reviewed_by: string | null; second_reviewed_at: string | null; approved_by: string | null; approved_at: string | null; note: string | null };
 };
 
@@ -178,6 +179,7 @@ function RunPage() {
       )}
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
+      {run.payslip_count > 0 && <RunPayslipsPanel runId={run.id} version={run.status} />}
       {run.kind === "adjustment" && run.totals?.adjustment && !run.amounts_restricted && <AdjustmentPanel lines={run.lines as never} totals={run.totals.adjustment} currency={run.currency} />}
       {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}
       {run.totals && <RecalculationChanges runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}

@@ -269,3 +269,27 @@ textarea.input{min-height:80px;resize:vertical}
   .mobilebar select{max-width:320px}
   .statebox{left:10px;right:10px;bottom:62px;justify-content:center}
 }
+
+/* Payslip (8.19): reads as a document on screen and prints on its own. */
+.payslip{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px;max-width:860px;margin-bottom:18px}
+.slipheader{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+.slipcompany{font-size:20px;font-weight:700}
+.slipnet{text-align:right}.slipnet strong{font-size:24px;color:var(--blue)}
+.slipmeta{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.slipmeta>div{display:flex;flex-direction:column;gap:2px}
+.slipcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.slipblock{margin-bottom:16px}
+.sliphead,.sliprow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.sliphead{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom-color:var(--line)}
+.sliprow>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.sliprow.total{font-weight:700;border-bottom:none}
+.sliptotal{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.sliptotal strong{font-size:20px;color:var(--blue)}
+.slipfoot{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:3px}
+@media(max-width:700px){.slipmeta{grid-template-columns:1fr 1fr}.slipcols{grid-template-columns:1fr}.payslip{padding:18px}}
+@media print{
+  body{background:#fff}
+  .side,.top,.mobilebar,.noprint{display:none!important}
+  .shell,.main{display:block!important;padding:0!important;margin:0!important}
+  .payslip{border:none;padding:0;max-width:none}
+}
