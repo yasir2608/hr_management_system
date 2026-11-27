@@ -58,6 +58,7 @@ use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
 use App\Http\Controllers\Payroll\PayrollReadinessController;
+use App\Http\Controllers\Payroll\PayrollReportController;
 use App\Http\Controllers\Payroll\PayrollRulesController;
 use App\Http\Controllers\Payroll\PayrollRunController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
@@ -71,6 +72,7 @@ use App\Http\Controllers\Platform\OverviewController as PlatformOverviewControll
 use App\Http\Controllers\Platform\SupportAccessController;
 use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\SearchController;
+use App\Payroll\Reports\PayrollReports;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [LoginController::class, 'store']);
@@ -339,6 +341,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::delete('/payroll/bank-formats/{format}', [BankFormatController::class, 'destroy'])->whereUlid('format');
         });
         Route::get('/payroll/bank-formats', [BankFormatController::class, 'index'])->middleware('permission:payroll.view,payroll.settings.manage,payroll.export');
+        Route::middleware('permission:payroll.reports.view')->group(function (): void {
+            Route::get('/payroll/reports', [PayrollReportController::class, 'options']);
+            Route::get('/payroll/reports/{type}', [PayrollReportController::class, 'show'])->whereIn('type', array_keys(PayrollReports::TYPES));
+            Route::get('/payroll/reports/{type}/download', [PayrollReportController::class, 'download'])->whereIn('type', array_keys(PayrollReports::TYPES));
+        });
         Route::middleware('permission:payroll.export')->group(function (): void {
             Route::get('/payroll/bank-exports', [BankExportController::class, 'index']);
             Route::get('/payroll/bank-exports/{export}/download', [BankExportController::class, 'download'])->whereUlid('export');
