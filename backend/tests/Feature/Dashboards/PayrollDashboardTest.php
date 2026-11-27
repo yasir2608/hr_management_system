@@ -63,6 +63,17 @@ class PayrollDashboardTest extends TestCase
         $this->assertSame(['UK monthly', 1, '2400.00'], [$dashboard['recent_runs'][0]['group'], $dashboard['recent_runs'][0]['employees'], $dashboard['recent_runs'][0]['net_pay']]);
     }
 
+    public function test_when_this_periods_pay_date_has_passed_the_next_pay_date_is_next_period(): void
+    {
+        $this->asCompany(fn () => PayrollSetting::query()->firstOrFail()->update(['pay_date_rule' => 'fixed_day', 'pay_day' => 25]));
+        $this->travelTo('2026-03-27 09:00:00');
+
+        $dashboard = $this->inCompany()->getJson('/api/dashboard/payroll')->json();
+
+        $this->assertSame(['2026-03-01', '2026-04-25', 29], [$dashboard['groups'][0]['period']['start'], $dashboard['groups'][0]['next_pay_date'], $dashboard['groups'][0]['days_to_pay']]);
+        $this->assertSame('2026-04-25', $dashboard['totals']['next_pay_date']);
+    }
+
     public function test_missing_setup_is_reported_per_group(): void
     {
         $this->asCompany(fn () => PayrollSetting::query()->firstOrFail()->update(['employer_details' => []]));

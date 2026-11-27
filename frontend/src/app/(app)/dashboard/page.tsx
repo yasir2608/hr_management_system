@@ -2,6 +2,7 @@
 
 import { SetupChecklist } from "@/components/company/SetupChecklist";
 import { HrDashboard } from "@/components/dashboard/HrDashboard";
+import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { PayrollDashboard } from "@/components/dashboard/PayrollDashboard";
 import { useAuth } from "@/lib/auth";
 
@@ -11,10 +12,13 @@ function greeting(hour: number) {
 
 /**
  * Dashboard from the visual design: greeting and date, then the dashboard for the viewer's role.
- * People with people access get the owner / HR dashboard; people with payroll access also get the payroll dashboard.
+ * HR (people who manage employee records) get the owner / HR dashboard, managers the team dashboard, and people
+ * with payroll access also get the payroll dashboard.
  */
 export default function DashboardPage() {
-  const { user, company, can } = useAuth();
+  const { user, company, can, access } = useAuth();
+  const isHr = can("employees.manage");
+  const isManager = !isHr && (access?.roles.includes("manager") ?? false);
   const firstName = user?.name.split(" ")[0] ?? "";
   const now = new Date();
 
@@ -28,8 +32,9 @@ export default function DashboardPage() {
         <span className="tiny" style={{ paddingTop: 6 }}>{now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>
       </div>
       <SetupChecklist compact />
-      {can("employees.view", "employees.manage") && <HrDashboard />}
-      {can("payroll.view", "payroll.run", "payroll.settings.manage") && <PayrollDashboard heading={can("employees.view", "employees.manage")} />}
+      {isHr && <HrDashboard />}
+      {isManager && <ManagerDashboard />}
+      {can("payroll.view", "payroll.run", "payroll.settings.manage") && <PayrollDashboard heading={isHr || isManager} />}
     </>
   );
 }

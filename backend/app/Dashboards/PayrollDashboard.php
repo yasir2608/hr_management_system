@@ -42,9 +42,12 @@ class PayrollDashboard
         $groups = PayrollGroup::query()->orderBy('country_code')->orderBy('name')->get()->map(function (PayrollGroup $group) use ($today, $workDays, $settings): array {
             $schedule = $group->schedule($settings->get($group->country_code));
             $period = null;
+            $nextPayDate = null;
             if ($schedule !== null) {
                 try {
-                    $period = (new PayCalendar($schedule, $workDays))->periodsFrom($today, 1)[0];
+                    [$period, $following] = (new PayCalendar($schedule, $workDays))->periodsFrom($today, 2);
+                    // The current period's pay date may already have passed (e.g. paid on the 25th); then the next one is next period's.
+                    $nextPayDate = $period['pay_date'] >= $today->toDateString() ? $period['pay_date'] : $following['pay_date'];
                 } catch (Throwable) {
                     $period = null;
                 }
@@ -69,7 +72,8 @@ class PayrollDashboard
                 ...$group->only(['id', 'name', 'country_code']),
                 'country_name' => config("countries.{$group->country_code}.name"),
                 'period' => $period,
-                'days_to_pay' => $period === null ? null : (int) $today->diffInDays(CarbonImmutable::parse($period['pay_date']), false),
+                'next_pay_date' => $nextPayDate,
+                'days_to_pay' => $nextPayDate === null ? null : (int) $today->diffInDays(CarbonImmutable::parse($nextPayDate), false),
                 'readiness' => $counts,
                 'employees' => array_sum($counts),
                 'setup_issues' => array_column($groupIssues, 'message'),
@@ -97,13 +101,13 @@ class PayrollDashboard
                 'approved_at' => $run->approved_at?->toIso8601String(),
             ]);
 
-        $next = $groups->filter(fn (array $group) => $group['period'] !== null)->sortBy(fn (array $group) => $group['period']['pay_date'])->first();
+        $next = $groups->filter(fn (array $group) => $group['next_pay_date'] !== null)->sortBy('next_pay_date')->first();
         $allCounts = $groups->reduce(fn (array $carry, array $group) => array_map(fn ($a, $b) => $a + $b, $carry, $group['readiness']), [0, 0, 0]);
         $total = array_sum($allCounts);
 
         return [
             'totals' => [
-                'next_pay_date' => $next['period']['pay_date'] ?? null,
+                'next_pay_date' => $next['next_pay_date'] ?? null,
                 'next_pay_group' => $next['name'] ?? null,
                 'days_to_next_pay' => $next['days_to_pay'] ?? null,
                 'employees' => $total,
