@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Leave;
 
 use App\Access\Access;
+use App\Approvals\ApprovalEngine;
 use App\Http\Controllers\Controller;
 use App\Leave\BalanceCalculator;
 use App\Leave\SubmitLeaveRequest;
@@ -10,6 +11,8 @@ use App\Leave\WorkingDays;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\User;
+use App\Support\Activity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -46,6 +49,77 @@ class LeaveRequestController extends Controller
         $leave = $submit->handle($employee, $this->validated($request), $request->user(), $request->file('attachment'));
 
         return response()->json(['request' => $this->present($leave->fresh(['leaveType'])), 'message' => 'Leave recorded.'], 201);
+    }
+
+    /**
+     * Changes a request that has not started yet. It goes for approval again; its own days are
+     * given back before the new dates are checked, so nothing is counted twice.
+     */
+    public function updateMine(Request $request, LeaveRequest $leaveRequest, SubmitLeaveRequest $submit): JsonResponse
+    {
+        $employee = $this->ownRequest($leaveRequest);
+        abort_unless($this->isChangeable($leaveRequest), 422, 'Only requests that are waiting, or approved leave that has not started, can be changed.');
+
+        $leave = $submit->handle($employee, $this->validated($request), $request->user(), $request->file('attachment'), $leaveRequest);
+
+        return response()->json([
+            'request' => $this->present($leave->fresh(['leaveType'])),
+            'message' => $leave->status === LeaveRequest::STATUS_APPROVED ? 'Leave changed.' : 'Your changed request was sent for approval again.',
+        ]);
+    }
+
+    /**
+     * Withdraws a waiting request, or cancels approved leave that has not started.
+     */
+    public function cancelMine(Request $request, LeaveRequest $leaveRequest, ApprovalEngine $approvals): JsonResponse
+    {
+        $this->ownRequest($leaveRequest);
+        abort_unless($this->isChangeable($leaveRequest), 422, 'Leave that has already started can only be cancelled by HR.');
+
+        $this->cancel($leaveRequest, $request->user(), $approvals, 'Cancelled by the employee');
+
+        return response()->json(['message' => 'Leave cancelled. The days are back in your balance.']);
+    }
+
+    /**
+     * HR can cancel any leave in their scope, including leave that has started.
+     */
+    public function cancelFor(Request $request, LeaveRequest $leaveRequest, ApprovalEngine $approvals): JsonResponse
+    {
+        abort_unless($this->access->scopeFor('leave.balances.manage')->covers($leaveRequest->employee), 404);
+        abort_if($leaveRequest->status === LeaveRequest::STATUS_CANCELLED || $leaveRequest->status === LeaveRequest::STATUS_DECLINED, 422, 'This leave is not active.');
+
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+        $this->cancel($leaveRequest, $request->user(), $approvals, $data['reason']);
+
+        return response()->json(['message' => 'Leave cancelled.']);
+    }
+
+    private function cancel(LeaveRequest $leaveRequest, User $by, ApprovalEngine $approvals, string $reason): void
+    {
+        if ($leaveRequest->approval !== null && $leaveRequest->approval->isOpen()) {
+            // The engine marks the request cancelled through onApprovalDecided.
+            $approvals->cancel($leaveRequest->approval, $by, $reason);
+
+            return;
+        }
+
+        $leaveRequest->forceFill(['status' => LeaveRequest::STATUS_CANCELLED, 'decided_at' => now()])->save();
+        Activity::record('leave.request_cancelled', "Leave of {$leaveRequest->employee->fullName()} from {$leaveRequest->start_date->toDateString()} cancelled", $leaveRequest, ['reason' => $reason]);
+    }
+
+    private function ownRequest(LeaveRequest $leaveRequest): Employee
+    {
+        $employee = $this->access->employee();
+        abort_unless($employee !== null && $leaveRequest->employee_id === $employee->id, 404);
+
+        return $employee;
+    }
+
+    private function isChangeable(LeaveRequest $leaveRequest): bool
+    {
+        return in_array($leaveRequest->status, LeaveRequest::OPEN_STATUSES, true)
+            || ($leaveRequest->status === LeaveRequest::STATUS_APPROVED && $leaveRequest->start_date->isFuture());
     }
 
     public function mine(): JsonResponse

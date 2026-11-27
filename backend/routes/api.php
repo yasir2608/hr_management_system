@@ -178,9 +178,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::middleware('permission:self.leave.request')->group(function (): void {
             Route::get('/me/leave/requests', [LeaveRequestController::class, 'mine']);
             Route::post('/me/leave/requests', [LeaveRequestController::class, 'storeMine'])->middleware('throttle:20,1');
+            Route::post('/me/leave/requests/{leaveRequest}', [LeaveRequestController::class, 'updateMine'])->whereUlid('leaveRequest');
+            Route::post('/me/leave/requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancelMine'])->whereUlid('leaveRequest');
         });
         Route::post('/leave/days-preview', [LeaveRequestController::class, 'preview']);
         Route::get('/leave/requests/{leaveRequest}/context', [LeaveRequestController::class, 'context'])->whereUlid('leaveRequest');
+        Route::post('/leave/requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancelFor'])->whereUlid('leaveRequest')->middleware('permission:leave.balances.manage');
         Route::get('/leave/requests', [LeaveRequestController::class, 'index'])->middleware('permission:leave.requests.view,leave.approve');
         Route::post('/leave/employees/{employee}/requests', [LeaveRequestController::class, 'storeFor'])->whereUlid('employee')->middleware('permission:leave.balances.manage');
         Route::get('/leave/employees/{employee}/balances', [LeaveBalanceController::class, 'forEmployee'])->whereUlid('employee');

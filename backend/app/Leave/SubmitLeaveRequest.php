@@ -32,7 +32,7 @@ class SubmitLeaveRequest
     /**
      * @param  array{leave_type_id: string, start_date: string, end_date: string, start_half?: bool, end_half?: bool, reason?: ?string}  $data
      */
-    public function handle(Employee $employee, array $data, User $requester, ?UploadedFile $attachment = null): LeaveRequest
+    public function handle(Employee $employee, array $data, User $requester, ?UploadedFile $attachment = null, ?LeaveRequest $existing = null): LeaveRequest
     {
         $type = LeaveType::query()->where('is_active', true)->findOrFail($data['leave_type_id']);
         $start = Carbon::parse($data['start_date'])->toDateString();
@@ -65,21 +65,30 @@ class SubmitLeaveRequest
             throw ValidationException::withMessages(['start_date' => 'These dates contain no working days.']);
         }
 
-        if ($type->attachment_after_days !== null && $days > $type->attachment_after_days && $attachment === null) {
+        if ($type->attachment_after_days !== null && $days > $type->attachment_after_days && $attachment === null && $existing?->attachment_document_id === null) {
             throw ValidationException::withMessages(['attachment' => "Attach supporting evidence for {$type->name} longer than {$type->attachment_after_days} days."]);
         }
 
         $overlap = LeaveRequest::query()->active()->where('employee_id', $employee->id)
+            ->when($existing, fn ($query) => $query->whereKeyNot($existing->id))
             ->where('start_date', '<=', $end)->where('end_date', '>=', $start)->first();
 
         if ($overlap !== null) {
             throw ValidationException::withMessages(['start_date' => 'You already have leave from '.$overlap->start_date->toDateString().' to '.$overlap->end_date->toDateString().' that overlaps these dates.']);
         }
 
-        ['unpaid' => $unpaidDays, 'exception' => $exceptionDays] = $this->checkBalance($employee, $type, $days, $start);
+        // When changing a request, its own days are given back first, so nothing is counted twice.
+        $ownDays = $existing !== null && $existing->leave_type_id === $type->id && in_array($existing->status, [...LeaveRequest::OPEN_STATUSES, LeaveRequest::STATUS_APPROVED], true)
+            ? $existing->paidDays() : 0.0;
+        ['unpaid' => $unpaidDays, 'exception' => $exceptionDays] = $this->checkBalance($employee, $type, $days, $start, $ownDays);
 
-        return DB::transaction(function () use ($employee, $type, $start, $end, $startHalf, $endHalf, $days, $unpaidDays, $exceptionDays, $data, $requester, $attachment): LeaveRequest {
-            $request = LeaveRequest::query()->create([
+        return DB::transaction(function () use ($employee, $type, $start, $end, $startHalf, $endHalf, $days, $unpaidDays, $exceptionDays, $data, $requester, $attachment, $existing): LeaveRequest {
+            if ($existing !== null && $existing->approval !== null && $existing->approval->isOpen()) {
+                $this->approvals->cancel($existing->approval, $requester, 'The request was changed and sent again.');
+            }
+
+            $request = $existing ?? new LeaveRequest;
+            $request->forceFill([
                 'employee_id' => $employee->id,
                 'leave_type_id' => $type->id,
                 'start_date' => $start,
@@ -91,7 +100,9 @@ class SubmitLeaveRequest
                 'reason' => $data['reason'] ?? null,
                 'status' => LeaveRequest::STATUS_PENDING,
                 'requested_by' => $requester->id,
-            ]);
+                'decided_at' => null,
+                'approval_request_id' => null,
+            ])->save();
 
             if ($attachment !== null) {
                 $request->forceFill(['attachment_document_id' => $this->storeAttachment($employee, $attachment, $requester, $type)->id])->save();
@@ -118,7 +129,11 @@ class SubmitLeaveRequest
                 $request->forceFill(['approval_request_id' => $approval->id])->save();
             }
 
-            Activity::record('leave.requested', "{$employee->fullName()} requested {$days} day(s) of {$type->name}", $request);
+            Activity::record(
+                $existing ? 'leave.request_changed' : 'leave.requested',
+                $existing ? "{$employee->fullName()} changed a leave request to {$days} day(s) of {$type->name}" : "{$employee->fullName()} requested {$days} day(s) of {$type->name}",
+                $request,
+            );
 
             return $request;
         });
@@ -133,13 +148,13 @@ class SubmitLeaveRequest
      *
      * @return array{unpaid: float, exception: float}
      */
-    protected function checkBalance(Employee $employee, LeaveType $type, float $days, string $start): array
+    protected function checkBalance(Employee $employee, LeaveType $type, float $days, string $start, float $ownDays = 0.0): array
     {
         if (! $type->uses_balance) {
             return ['unpaid' => 0.0, 'exception' => 0.0];
         }
 
-        $available = max(0.0, $this->balances->balance($employee, $type, $start)['available']);
+        $available = max(0.0, $this->balances->balance($employee, $type, $start)['available'] + $ownDays);
 
         if ($days <= $available) {
             return ['unpaid' => 0.0, 'exception' => 0.0];

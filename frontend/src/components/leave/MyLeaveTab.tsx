@@ -33,7 +33,7 @@ export function MyLeaveTab() {
   const [rule, setRule] = useState<"block" | "allow_unpaid" | "exception">("block");
   const [requests, setRequests] = useState<LeaveRequestRow[] | null>(null);
   const [types, setTypes] = useState<LeaveType[]>([]);
-  const [form, setForm] = useState<{ leave_type_id: string; start_date: string; end_date: string; start_half: boolean; end_half: boolean; reason: string } | null>(null);
+  const [form, setForm] = useState<{ id?: string; leave_type_id: string; start_date: string; end_date: string; start_half: boolean; end_half: boolean; reason: string } | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [days, setDays] = useState<number | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -64,14 +64,24 @@ export function MyLeaveTab() {
       .catch(() => setDays(null));
   }, [form?.start_date, form?.end_date, form?.start_half, form?.end_half]);
 
+  async function cancelRequest(id: string) {
+    if (!window.confirm("Cancel this leave? The days go back to your balance.")) return;
+    try {
+      setNotice((await api<{ message: string }>(`/me/leave/requests/${id}/cancel`, { method: "POST" })).message);
+    } catch (caught) {
+      setNotice(caught instanceof ApiError ? caught.message : "Could not cancel.");
+    }
+    await load();
+  }
+
   async function send() {
     if (!form) return;
     setError(null);
     const body = new FormData();
-    Object.entries(form).forEach(([key, value]) => body.append(key, typeof value === "boolean" ? (value ? "1" : "0") : value));
+    Object.entries(form).forEach(([key, value]) => key !== "id" && value !== undefined && body.append(key, typeof value === "boolean" ? (value ? "1" : "0") : value));
     if (file) body.append("attachment", file);
     try {
-      const result = await api<{ message: string }>("/me/leave/requests", { body });
+      const result = await api<{ message: string }>(form.id ? `/me/leave/requests/${form.id}` : "/me/leave/requests", { body });
       setNotice(result.message);
       setForm(null);
       setFile(null);
@@ -99,7 +109,7 @@ export function MyLeaveTab() {
         {requests && requests.length === 0 ? (
           <EmptyState icon="☀" title="No leave requests yet" />
         ) : (
-          <Table headers={["Leave type", "Dates", "Days", "Status", "Reason"]}>
+          <Table headers={["Leave type", "Dates", "Days", "Status", "Reason", ""]}>
             {requests?.map((row) => (
               <tr key={row.id}>
                 <td><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 5, background: row.leave_type?.color, marginRight: 7 }} />{row.leave_type?.name}</td>
@@ -107,6 +117,14 @@ export function MyLeaveTab() {
                 <td>{Number(row.days)}{Number(row.unpaid_days) > 0 && <div className="tiny">{Number(row.unpaid_days)} unpaid</div>}</td>
                 <td>{approvalStatus[row.status] ?? row.status}{row.approval_request_id && <div><button className="link" onClick={() => setAnswering(row.approval_request_id)}>{row.status === "info_requested" ? "Answer the question" : "Details"}</button></div>}</td>
                 <td className="muted" style={{ whiteSpace: "normal" }}>{row.reason ?? "—"}</td>
+                <td style={{ textAlign: "right" }}>
+                  {(["pending", "info_requested"].includes(row.status) || (row.status === "approved" && row.start_date > today)) && (
+                    <div className="row" style={{ justifyContent: "flex-end" }}>
+                      <button className="btn" onClick={() => { setError(null); setDays(null); setForm({ id: row.id, leave_type_id: row.leave_type?.id ?? "", start_date: row.start_date, end_date: row.end_date, start_half: row.start_half, end_half: row.end_half, reason: row.reason ?? "" }); }}>Change</button>
+                      <button className="btn danger" onClick={() => void cancelRequest(row.id)}>{row.status === "approved" ? "Cancel" : "Withdraw"}</button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </Table>
@@ -118,7 +136,7 @@ export function MyLeaveTab() {
         </Modal>
       )}
       {form && (
-        <Modal title="Request leave" onClose={() => setForm(null)} footer={<><button className="btn" onClick={() => setForm(null)}>Cancel</button><button className="btn primary" onClick={() => void send()}>Send request</button></>}>
+        <Modal title={form.id ? "Change leave request" : "Request leave"} onClose={() => setForm(null)} footer={<><button className="btn" onClick={() => setForm(null)}>Cancel</button><button className="btn primary" onClick={() => void send()}>Send request</button></>}>
           {error && <Banner tone="error">{error.message}</Banner>}
           <div className="formgrid">
             <Field label="Leave type" full error={error?.errors.leave_type_id?.[0]}>
