@@ -22,10 +22,22 @@ class FlatRateRules implements CountryRules
         return 'TEST-FLAT-1';
     }
 
+    protected function taxRate(): float
+    {
+        return 0.20;
+    }
+
+    public function figures(): array
+    {
+        return [['label' => 'Tax rate', 'value' => ($this->taxRate() * 100).'%'], ['label' => 'Employer contribution', 'value' => '10%']];
+    }
+
     public function calculate(PayContext $context): RulesResult
     {
+        $percent = $this->taxRate() * 100;
+
         return (new RulesResult)
-            ->employeeLine('tax', 'Flat tax', Money::times($context->taxablePay, 0.20), '20% of taxable pay.')
+            ->employeeLine('tax', 'Flat tax', Money::times($context->taxablePay, $this->taxRate()), "{$percent}% of taxable pay.")
             ->employerLine('employer_contribution', 'Employer contribution', Money::times($context->grossPay, 0.10), '10% of gross pay.');
     }
 }

@@ -22,7 +22,7 @@ type Run = {
   id: string; status: string; country_code: string; country_name: string; currency: string; pay_frequency: string;
   group: { id: string; name: string } | null; period_start: string; period_end: string; pay_date: string;
   employee_count: number; excluded_count: number; created_by: string | null; inputs_gathered_at: string | null;
-  amounts_restricted: boolean; lines: Line[]; totals: Totals | null;
+  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null;
 };
 
 const PER: Record<string, string> = { annual: "/yr", monthly: "/mo", hourly: "/hr" };
@@ -102,7 +102,7 @@ function RunPage() {
         <Stat label="Status" value={<Badge status={run.status} label={humanize(run.status)} />} />
         <Stat label="Employees included" value={included.length} />
         <Stat label="Left out" value={excluded.length} note={excluded.length ? "Blocking issues" : undefined} />
-        <Stat label="Inputs gathered" value={run.inputs_gathered_at ? formatDateTime(run.inputs_gathered_at) : "—"} />
+        <Stat label="Inputs gathered" value={run.inputs_gathered_at ? formatDateTime(run.inputs_gathered_at) : "—"} note={run.rules_versions?.length ? `Tax rules ${run.rules_versions.join(", ")}` : undefined} />
       </div>
       {excluded.length > 0 && (
         <Panel title="Left out of this run" subtitle="Fix these, then gather inputs again before calculating." bodyless>

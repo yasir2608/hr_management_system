@@ -124,7 +124,7 @@ class PayrollRunController extends Controller
     private function summary(PayrollRun $run): array
     {
         return [
-            ...$run->only(['id', 'payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'status']),
+            ...$run->only(['id', 'payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'status', 'rules_versions']),
             'group' => $run->group?->only(['id', 'name']),
             'period_start' => $run->period_start->toDateString(),
             'period_end' => $run->period_end->toDateString(),

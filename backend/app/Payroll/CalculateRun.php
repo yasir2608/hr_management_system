@@ -63,6 +63,7 @@ class CalculateRun
             $run->forceFill([
                 'status' => PayrollRun::CALCULATED,
                 'totals' => [...$totals, 'rules_versions' => array_keys($versions), 'calculated_at' => now()->toIso8601String()],
+                'rules_versions' => array_keys($versions),
             ])->save();
         });
 
