@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { NoAccess } from "@/components/Guard";
-import { Badge, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
+import { Badge, Banner, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { countryName } from "@/lib/countries";
 import { statusLabel, type Employee } from "@/lib/employees";
@@ -63,10 +64,20 @@ export default function EmployeeDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [tab, setTab] = useState("overview");
+  const [modal, setModal] = useState<"details" | "change" | "payroll" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api<Profile>(`/employees/${id}`).then(setProfile).catch((caught) => setError(caught instanceof ApiError ? caught : null));
   }, [id]);
+
+  useEffect(load, [load]);
+
+  function done(message: string) {
+    setModal(null);
+    setNotice(message);
+    load();
+  }
 
   if (error) return error.status === 404 ? <NoAccess message="This employee does not exist, or is outside the people you have access to." /> : <EmptyState title={error.message} />;
   if (!profile) return <div className="loadingpage">Loading…</div>;
@@ -91,7 +102,16 @@ export default function EmployeeDetailPage() {
             </p>
           </div>
         </div>
+        <div className="actions">
+          {profile.can_edit && <button className="btn" onClick={() => setModal("details")}>Edit details</button>}
+          {(profile.can_edit || profile.can_edit_payroll) && <button className="btn primary" onClick={() => setModal("change")}>Record a change</button>}
+          {profile.can_edit_payroll && <button className="btn soft" onClick={() => setModal("payroll")}>Payroll details</button>}
+        </div>
       </div>
+      {notice && <Banner tone="success">{notice}</Banner>}
+      {modal === "details" && <EditDetailsModal employee={summary} personal={personal ?? undefined} onClose={() => setModal(null)} onDone={done} />}
+      {modal === "change" && <RecordChangeModal employee={summary} canChangePay={profile.can_edit_payroll} onClose={() => setModal(null)} onDone={done} />}
+      {modal === "payroll" && <PayrollDetailsModal employee={summary} onClose={() => setModal(null)} onDone={done} />}
 
       <div className="tabs" role="tablist">
         {tabs.map(([key, label]) => (

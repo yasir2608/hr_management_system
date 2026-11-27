@@ -89,10 +89,10 @@ class CreateEmployee
         $taxDetails = array_filter($data['tax_details'] ?? [], fn ($value) => filled($value));
 
         if ($taxDetails !== [] && $employee->work_country) {
-            EmployeeTaxDetail::query()->updateOrCreate(
-                ['employee_id' => $employee->id, 'country_code' => $employee->work_country],
-                ['details' => $taxDetails],
-            );
+            $existing = EmployeeTaxDetail::query()->firstOrNew(['employee_id' => $employee->id, 'country_code' => $employee->work_country]);
+            // Empty fields keep their current value.
+            $existing->details = [...($existing->details ?? []), ...$taxDetails];
+            $existing->save();
         }
 
         if (! empty($data['bank'])) {

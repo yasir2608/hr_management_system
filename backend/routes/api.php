@@ -20,6 +20,7 @@ use App\Http\Controllers\Company\PreferencesController;
 use App\Http\Controllers\Company\RegionalSettingsController;
 use App\Http\Controllers\Company\SetupChecklistController;
 use App\Http\Controllers\Company\SignInSettingsController;
+use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
@@ -97,10 +98,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Employees
         Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view,employees.manage');
         Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->whereUlid('employee');
-        Route::middleware('permission:employees.manage')->group(function (): void {
-            Route::get('/employees/form-options', [EmployeeController::class, 'formOptions']);
-            Route::post('/employees', [EmployeeController::class, 'store']);
-        });
+        Route::put('/employees/{employee}', [EmployeeChangeController::class, 'updateDetails'])->whereUlid('employee');
+        Route::post('/employees/{employee}/changes', [EmployeeChangeController::class, 'recordChange'])->whereUlid('employee');
+        Route::put('/employees/{employee}/payroll-details', [EmployeeChangeController::class, 'updatePayrollDetails'])->whereUlid('employee');
+        Route::get('/employees/form-options', [EmployeeController::class, 'formOptions'])->middleware('permission:employees.manage,payroll.settings.manage');
+        Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.manage');
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
