@@ -9,7 +9,7 @@ import { RecalculationChanges } from "@/components/payroll/RecalculationChanges"
 import { RunComparisonPanel } from "@/components/payroll/RunComparisonPanel";
 import { RunIssuesPanel, type IssueSummary } from "@/components/payroll/RunIssuesPanel";
 import { RunResults, type Results } from "@/components/payroll/RunResults";
-import { Badge, Banner, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime, humanize, money } from "@/components/ui";
+import { Badge, Banner, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime, humanize, money, Field, Modal } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -27,13 +27,16 @@ type Run = {
   group: { id: string; name: string } | null; period_start: string; period_end: string; pay_date: string;
   employee_count: number; excluded_count: number; created_by: string | null; inputs_gathered_at: string | null;
   amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null;
+  approval: { requires_second_review: boolean; prepared_by_id: string | null; second_reviewed_by: string | null; second_reviewed_at: string | null; approved_by: string | null; approved_at: string | null; note: string | null };
 };
 
 const PER: Record<string, string> = { annual: "/yr", monthly: "/mo", hourly: "/hr" };
 
 function RunPage() {
   const { id } = useParams<{ id: string }>();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const [approving, setApproving] = useState(false);
+  const [approvalNote, setApprovalNote] = useState("");
   const [run, setRun] = useState<Run | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,17 @@ function RunPage() {
     }
   }
 
+  async function step(path: "second-review" | "approve", message: string) {
+    setError(null);
+    try {
+      setRun(await api<Run>(`/payroll/runs/${id}/${path}`, { method: "POST", body: path === "approve" ? { note: approvalNote || null } : undefined }));
+      setNotice(message);
+      setApproving(false);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.errors.run?.[0] ?? caught.message : "Could not save.");
+    }
+  }
+
   async function submitForReview() {
     setError(null);
     try {
@@ -112,6 +126,8 @@ function RunPage() {
           {can("payroll.run") && run.status !== "approved" && run.status !== "cancelled" && <button className="btn danger" onClick={() => void cancel()}>Cancel run</button>}
           {can("payroll.run") && (run.status === "draft" || run.status === "calculated") && <button className="btn primary" disabled={calculating} onClick={() => void calculate()}>{calculating ? "Calculating…" : run.status === "calculated" ? "Calculate again" : "Calculate"}</button>}
           {can("payroll.run") && ["draft", "calculated", "in_review"].includes(run.status) && <button className="btn" disabled={calculating} onClick={() => void refresh()}>Gather inputs again</button>}
+          {run.status === "in_review" && run.approval.requires_second_review && !run.approval.second_reviewed_at && (can("payroll.run") || can("payroll.approve")) && run.approval.prepared_by_id !== user?.id && <button className="btn" onClick={() => void step("second-review", "Second review recorded.")}>Complete second review</button>}
+          {run.status === "in_review" && can("payroll.approve") && <button className="btn primary" disabled={!issueSummary?.can_approve || (run.approval.requires_second_review && !run.approval.second_reviewed_at)} onClick={() => setApproving(true)}>Approve run</button>}
           {can("payroll.run") && run.status === "calculated" && (issueSummary?.blocking ?? 1) === 0 && <button className="btn primary" onClick={() => void submitForReview()}>Send for review</button>}
         </>}
       />
@@ -128,6 +144,14 @@ function RunPage() {
         </div>
       )}
       {run.status === "cancelled" && <Banner tone="error">This run was cancelled.</Banner>}
+      {run.status === "approved" && <Banner tone="success">Approved by {run.approval.approved_by ?? "—"} on {run.approval.approved_at ? formatDateTime(run.approval.approved_at) : "—"}{run.approval.note && ` (“${run.approval.note}”)`}. This run is locked: its figures, inputs and tax rule versions are kept exactly as approved.</Banner>}
+      {run.status === "in_review" && run.approval.requires_second_review && <Banner tone="info">{run.approval.second_reviewed_at ? `Second review completed by ${run.approval.second_reviewed_by}.` : "This payroll needs a second review by someone other than the preparer before it can be approved."}</Banner>}
+      {approving && (
+        <Modal title="Approve payroll run" onClose={() => setApproving(false)} footer={<><button className="btn" onClick={() => setApproving(false)}>Cancel</button><button className="btn primary" onClick={() => void step("approve", "Run approved and locked.")}>Approve and lock</button></>}>
+          <div className="callout">Approving locks this run. It can no longer be recalculated or cancelled; any later fix goes through a recorded correction.</div>
+          <Field label="Note" optional><input className="input" value={approvalNote} onChange={(event) => setApprovalNote(event.target.value)} placeholder="e.g. Checked against the March budget" /></Field>
+        </Modal>
+      )}
       {run.status === "in_review" && <Banner tone="info">In review. Check the totals, each employee’s breakdown and any warnings before approval. Calculating again takes the run back out of review.</Banner>}
       <div className="grid stats">
         <Stat label="Status" value={<Badge status={run.status} label={humanize(run.status)} />} />

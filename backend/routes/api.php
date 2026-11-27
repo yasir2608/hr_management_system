@@ -326,6 +326,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/payroll/runs/{run}/issues/review', [RunIssueController::class, 'review'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/issues/unreview', [RunIssueController::class, 'unreview'])->whereUlid('run');
         });
+        Route::middleware('permission:payroll.run,payroll.approve')->group(function (): void {
+            Route::post('/payroll/runs/{run}/second-review', [PayrollRunController::class, 'secondReview'])->whereUlid('run');
+        });
+        Route::middleware('permission:payroll.approve')->group(function (): void {
+            Route::post('/payroll/runs/{run}/approve', [PayrollRunController::class, 'approve'])->whereUlid('run');
+        });
 
         // Activity history
         Route::get('/activity/integrity', ActivityIntegrityController::class)->middleware('permission:activity.view');

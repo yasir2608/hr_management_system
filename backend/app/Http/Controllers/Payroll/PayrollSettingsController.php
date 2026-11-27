@@ -49,6 +49,7 @@ class PayrollSettingsController extends Controller
             'pay_day' => ['nullable', 'required_if:pay_date_rule,fixed_day', 'integer', 'between:1,31'],
             'pay_date_offset_days' => ['nullable', 'required_if:pay_date_rule,days_after_period_end', 'integer', 'between:0,15'],
             'input_cutoff_days' => ['required', 'integer', 'between:0,15'],
+            'require_second_review' => ['boolean'],
             'employer_details' => ['nullable', 'array'],
             ...$this->employerRules($country, $config),
         ], [
@@ -69,7 +70,7 @@ class PayrollSettingsController extends Controller
             }
         }
 
-        $tracked = ['currency', 'pay_frequency', 'period_start_day', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days'];
+        $tracked = ['currency', 'pay_frequency', 'period_start_day', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days', 'require_second_review'];
         $before = $setting->exists ? $setting->only($tracked) : [];
         $setting->fill([
             ...collect($data)->except('employer_details')->all(),
@@ -122,7 +123,7 @@ class PayrollSettingsController extends Controller
                 'key' => $key, 'label' => $field['label'], 'required' => $field['required'], 'hint' => $field['hint'], 'options' => $field['options'] ?? null,
             ])->values(),
             'setting' => $setting === null ? null : [
-                ...$setting->only(['id', 'currency', 'pay_frequency', 'period_start_day', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days', 'updated_at']),
+                ...$setting->only(['id', 'currency', 'pay_frequency', 'period_start_day', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days', 'require_second_review', 'updated_at']),
                 'anchor_date' => $setting->anchor_date?->toDateString(),
                 'employer_details' => collect($config['employer_fields'])->mapWithKeys(fn (array $field, string $key): array => [
                     $key => isset($employer[$key]) ? ($canSee || isset($field['options']) ? $employer[$key] : SensitiveData::mask((string) $employer[$key], 3)) : null,

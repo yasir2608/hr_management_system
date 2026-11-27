@@ -8,6 +8,7 @@ use App\Models\CompanySetting;
 use App\Models\PayrollGroup;
 use App\Models\PayrollRun;
 use App\Models\PayrollRunEmployee;
+use App\Payroll\ApproveRun;
 use App\Payroll\CalculateRun;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
@@ -91,13 +92,22 @@ class PayrollRunController extends Controller
 
     public function show(PayrollRun $run): JsonResponse
     {
-        $run->load(['group:id,name', 'creator:id,name']);
+        $run->load(['group:id,name', 'creator:id,name', 'approver:id,name', 'secondReviewer:id,name']);
         $canSeePay = $this->sensitive->canSee(SensitiveData::SALARY);
         $lines = $run->lines()->orderByDesc('included')->orderBy('employee_name')->get();
 
         return response()->json([
             ...$this->summary($run->loadCount(['lines as employee_count', 'lines as excluded_count' => fn ($query) => $query->where('included', false)])),
             'company_name' => app(CurrentCompany::class)->get()?->name,
+            'approval' => [
+                'requires_second_review' => $run->requiresSecondReview(),
+                'prepared_by_id' => $run->created_by,
+                'second_reviewed_by' => $run->secondReviewer?->name,
+                'second_reviewed_at' => $run->second_reviewed_at?->toIso8601String(),
+                'approved_by' => $run->approver?->name,
+                'approved_at' => $run->approved_at?->toIso8601String(),
+                'note' => $run->approval_note,
+            ],
             'country_name' => config("countries.{$run->country_code}.name"),
             'created_by' => $run->creator?->name,
             'inputs_gathered_at' => $run->inputs_gathered_at?->toIso8601String(),
@@ -170,6 +180,21 @@ class PayrollRunController extends Controller
     public function comparison(PayrollRun $run, RunComparison $comparison): JsonResponse
     {
         return response()->json([...$comparison->compare($run, $this->sensitive->canSee(SensitiveData::SALARY)), 'amounts_restricted' => ! $this->sensitive->canSee(SensitiveData::SALARY)]);
+    }
+
+    public function secondReview(Request $request, PayrollRun $run, ApproveRun $approve): JsonResponse
+    {
+        $approve->secondReview($run, $request->user());
+
+        return $this->show($run->fresh());
+    }
+
+    public function approve(Request $request, PayrollRun $run, ApproveRun $approve): JsonResponse
+    {
+        $note = $request->validate(['note' => ['nullable', 'string', 'max:500']])['note'] ?? null;
+        $approve->approve($run, $request->user(), $note);
+
+        return $this->show($run->fresh());
     }
 
     public function cancel(Request $request, PayrollRun $run): JsonResponse

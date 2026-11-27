@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * A company's payroll setup for one country. Employer identifiers are encrypted and shown only with payroll.tax_ids.view.
  */
-#[Fillable(['country_code', 'currency', 'pay_frequency', 'period_start_day', 'anchor_date', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days', 'employer_details', 'updated_by'])]
+#[Fillable(['country_code', 'currency', 'pay_frequency', 'period_start_day', 'anchor_date', 'pay_date_rule', 'pay_day', 'pay_date_offset_days', 'input_cutoff_days', 'require_second_review', 'employer_details', 'updated_by'])]
 #[Hidden(['employer_details'])]
 class PayrollSetting extends Model
 {
@@ -31,7 +31,7 @@ class PayrollSetting extends Model
     {
         return [
             'employer_details' => 'encrypted:array', 'anchor_date' => 'date:Y-m-d',
-            'period_start_day' => 'integer', 'pay_day' => 'integer', 'pay_date_offset_days' => 'integer', 'input_cutoff_days' => 'integer',
+            'period_start_day' => 'integer', 'pay_day' => 'integer', 'pay_date_offset_days' => 'integer', 'input_cutoff_days' => 'integer', 'require_second_review' => 'boolean',
         ];
     }
 

@@ -37,7 +37,7 @@ class PayrollRun extends Model
     {
         return [
             'period_start' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d', 'pay_date' => 'date:Y-m-d',
-            'totals' => 'array', 'rules_versions' => 'array', 'recalculated_at' => 'datetime', 'recalculation' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
+            'totals' => 'array', 'rules_versions' => 'array', 'recalculated_at' => 'datetime', 'second_reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'recalculation' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
         ];
     }
 
@@ -63,6 +63,27 @@ class PayrollRun extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function secondReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'second_reviewed_by');
+    }
+
+    public function requiresSecondReview(): bool
+    {
+        return (bool) PayrollSetting::query()->where('country_code', $this->country_code)->value('require_second_review');
     }
 
     public function isOpen(): bool

@@ -11,7 +11,7 @@ type EmployerField = { key: string; label: string; required: boolean; hint: stri
 type Period = { start: string; end: string; pay_date: string; input_cutoff: string };
 type Setting = {
   id: string; currency: string; pay_frequency: string; period_start_day: number; anchor_date: string | null; pay_date_rule: string;
-  pay_day: number | null; pay_date_offset_days: number | null; input_cutoff_days: number; employer_details: Record<string, string | null>; updated_at: string;
+  pay_day: number | null; pay_date_offset_days: number | null; input_cutoff_days: number; require_second_review: boolean; employer_details: Record<string, string | null>; updated_at: string;
 };
 type CountrySettings = {
   country_code: string; country_name: string; default_currency: string; pay_frequencies: string[]; employer_fields: EmployerField[];
@@ -20,7 +20,7 @@ type CountrySettings = {
 
 type Draft = {
   currency: string; pay_frequency: string; period_start_day: string; anchor_date: string; pay_date_rule: string;
-  pay_day: string; pay_date_offset_days: string; input_cutoff_days: string; employer_details: Record<string, string>;
+  pay_day: string; pay_date_offset_days: string; input_cutoff_days: string; require_second_review: boolean; employer_details: Record<string, string>;
 };
 
 const FREQUENCY_LABELS: Record<string, string> = { monthly: "Monthly", semi_monthly: "Twice a month (1st–15th, 16th–end)", biweekly: "Every two weeks", four_weekly: "Every four weeks", weekly: "Weekly" };
@@ -38,6 +38,7 @@ function toDraft(country: CountrySettings): Draft {
     pay_day: setting?.pay_day ? String(setting.pay_day) : "",
     pay_date_offset_days: setting?.pay_date_offset_days != null ? String(setting.pay_date_offset_days) : "",
     input_cutoff_days: String(setting?.input_cutoff_days ?? 3),
+    require_second_review: setting?.require_second_review ?? false,
     employer_details: Object.fromEntries(country.employer_fields.map((field) => [field.key, setting?.employer_details[field.key] ?? ""])),
   };
 }
@@ -119,6 +120,9 @@ function CountryForm({ country, canManage, canSeeIds, onSaved }: { country: Coun
               )}
               <Field label="Inputs close (days before pay date)" required hint="Changes after this go into the next period" error={fieldError("input_cutoff_days")}>
                 <input className="input" type="number" min={0} max={15} value={draft.input_cutoff_days} onChange={(event) => set({ input_cutoff_days: event.target.value })} />
+              </Field>
+              <Field label="Approval" full>
+                <label className="checkrow"><input type="checkbox" checked={draft.require_second_review} onChange={(event) => set({ require_second_review: event.target.checked })} /> Require a second review, by someone other than the preparer, before a run can be approved</label>
               </Field>
             </div>
           </fieldset>
