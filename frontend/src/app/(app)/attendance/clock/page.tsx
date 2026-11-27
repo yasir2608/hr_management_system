@@ -6,7 +6,19 @@ import { Badge, Banner, EmptyState, Field, PageHead, Panel } from "@/components/
 import { api, ApiError } from "@/lib/api";
 
 type Shift = { id: string; clock_in_local: string; clock_out_local: string | null; minutes: number; note: string | null };
-type Status = { enabled: boolean; timezone: string; local_time: string; clocked_in: boolean; open_shift: Shift | null; minutes_today: number };
+type Status = { enabled: boolean; timezone: string; local_time: string; clocked_in: boolean; open_shift: Shift | null; minutes_today: number; restriction?: { type: "none" | "network" | "location"; message: string | null } };
+
+/** Asks the browser for the current position (only when the company limits clocking to a location). */
+function currentPosition(): Promise<{ latitude: number; longitude: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+}
 
 function hours(minutes: number) {
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
@@ -34,7 +46,8 @@ function ClockPage() {
   async function press(action: "in" | "out") {
     setBusy(true);
     try {
-      const result = await api<Status & { message: string }>(`/me/clock/${action}`, { body: { note: note || null } });
+      const position = status?.restriction?.type === "location" ? await currentPosition() : null;
+      const result = await api<Status & { message: string }>(`/me/clock/${action}`, { body: { note: note || null, ...(position ?? {}) } });
       setStatus(result);
       setConfirmation({ tone: "success", text: result.message });
       setNote("");
@@ -58,6 +71,7 @@ function ClockPage() {
     <>
       <PageHead eyebrow="Time & attendance" title="Clock in and out" subtitle="Your working time is recorded in your location's time zone." />
       {confirmation && <Banner tone={confirmation.tone}>{confirmation.text}</Banner>}
+      {status.restriction?.type !== "none" && status.restriction?.message && <div className="callout blue" style={{ marginBottom: 14 }}>{status.restriction.message}</div>}
       {!status.enabled ? (
         <Panel><EmptyState icon="◷" title="Your company does not record attendance in M.Y HRMS" /></Panel>
       ) : (

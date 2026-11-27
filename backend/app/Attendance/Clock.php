@@ -16,6 +16,8 @@ use Illuminate\Validation\ValidationException;
  */
 class Clock
 {
+    public function __construct(private readonly LocationRestriction $restriction) {}
+
     public function status(Employee $employee): array
     {
         $open = $this->openShift($employee);
@@ -26,6 +28,7 @@ class Clock
 
         return [
             'enabled' => (bool) CompanyPreference::current()->attendance_enabled,
+            'restriction' => $this->restriction->describe(),
             'timezone' => $timezone,
             'local_time' => now($timezone)->toIso8601String(),
             'clocked_in' => $open !== null,
@@ -37,6 +40,7 @@ class Clock
     public function in(Employee $employee, Request $request, ?string $note = null): AttendanceRecord
     {
         $this->ensureEnabled();
+        $this->restriction->check($employee, $request);
 
         // Locking the employee row serialises double clicks and two open tabs.
         $record = DB::transaction(function () use ($employee, $request, $note): AttendanceRecord {
@@ -65,6 +69,7 @@ class Clock
     public function out(Employee $employee, Request $request, ?string $note = null): AttendanceRecord
     {
         $this->ensureEnabled();
+        $this->restriction->check($employee, $request);
         $open = $this->openShift($employee);
 
         if ($open === null) {

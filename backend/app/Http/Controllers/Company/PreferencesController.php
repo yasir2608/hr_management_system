@@ -24,6 +24,10 @@ class PreferencesController extends Controller
             'insufficient_balance_rule' => ['required', Rule::in([CompanyPreference::BALANCE_BLOCK, CompanyPreference::BALANCE_ALLOW_UNPAID, CompanyPreference::BALANCE_EXCEPTION])],
             'attendance_enabled' => ['required', 'boolean'],
             'standard_hours_per_day' => ['required', 'numeric', 'between:1,24'],
+            'attendance_restriction' => ['nullable', Rule::in(['none', 'network', 'location'])],
+            'attendance_allowed_networks' => ['nullable', 'array', 'required_if:attendance_restriction,network'],
+            'attendance_allowed_networks.*' => ['string', 'max:50', 'regex:/^[0-9a-fA-F:.]+(\/\d{1,3})?$/'],
+            'attendance_restriction_message' => ['nullable', 'string', 'max:500'],
         ]);
 
         $preferences = CompanyPreference::current();
@@ -54,7 +58,8 @@ class PreferencesController extends Controller
     private function present(CompanyPreference $preferences): array
     {
         return [
-            ...$preferences->only(['leave_year_start_month', 'half_day_leave_allowed', 'insufficient_balance_rule', 'attendance_enabled', 'standard_hours_per_day']),
+            ...$preferences->only(['leave_year_start_month', 'half_day_leave_allowed', 'insufficient_balance_rule', 'attendance_enabled', 'standard_hours_per_day', 'attendance_allowed_networks', 'attendance_restriction_message']),
+            'attendance_restriction' => $preferences->attendance_restriction ?? 'none',
             'status' => match (true) {
                 $preferences->confirmed_at !== null => 'confirmed',
                 $preferences->skipped_at !== null => 'skipped',

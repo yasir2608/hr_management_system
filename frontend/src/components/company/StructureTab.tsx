@@ -13,7 +13,7 @@ type Kind = "locations" | "departments" | "teams";
 type Editing = { kind: Kind; record: Record<string, unknown> & { id?: string } };
 
 const empty: Record<Kind, Record<string, unknown>> = {
-  locations: { code: "", name: "", country_code: "GB", city: "", timezone: "", is_active: true },
+  locations: { code: "", name: "", country_code: "GB", city: "", timezone: "", latitude: null, longitude: null, clock_radius_m: null, is_active: true },
   departments: { name: "", code: "", parent_id: null, is_active: true },
   teams: { name: "", department_id: null, is_active: true },
 };
@@ -160,6 +160,9 @@ export function StructureTab() {
                   </select>
                 </Field>
                 <Field label="City" optional><input className="input" value={value("city")} onChange={(event) => set("city", event.target.value)} /></Field>
+                <Field label="Latitude" optional error={fieldError("latitude")} hint="Only needed if clocking in is limited to this location."><input className="input" type="number" step="0.000001" value={value("latitude")} onChange={(event) => set("latitude", event.target.value === "" ? null : Number(event.target.value))} /></Field>
+                <Field label="Longitude" optional error={fieldError("longitude")}><input className="input" type="number" step="0.000001" value={value("longitude")} onChange={(event) => set("longitude", event.target.value === "" ? null : Number(event.target.value))} /></Field>
+                <Field label="Clock-in radius (metres)" optional error={fieldError("clock_radius_m")} hint="Default 200 m."><input className="input" type="number" min="50" value={value("clock_radius_m")} onChange={(event) => set("clock_radius_m", event.target.value === "" ? null : Number(event.target.value))} /></Field>
                 <Field label="Time zone" optional full error={fieldError("timezone")} hint="Leave empty to use the company time zone, e.g. Europe/London.">
                   <input className="input" value={value("timezone")} onChange={(event) => set("timezone", event.target.value)} />
                 </Field>

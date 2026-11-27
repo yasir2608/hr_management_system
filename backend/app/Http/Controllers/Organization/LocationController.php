@@ -68,6 +68,9 @@ class LocationController extends Controller
             'region' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'timezone' => ['nullable', 'timezone:all'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'clock_radius_m' => ['nullable', 'integer', 'between:50,10000'],
             'is_active' => ['boolean'],
         ], ['code.unique' => 'Another location already uses this code.'], ['country_code' => 'country']);
     }

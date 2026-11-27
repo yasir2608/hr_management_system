@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['code', 'name', 'country_code', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'timezone', 'is_active'])]
+#[Fillable(['code', 'name', 'country_code', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'timezone', 'latitude', 'longitude', 'clock_radius_m', 'is_active'])]
 class Location extends Model
 {
     /** @use HasFactory<LocationFactory> */
@@ -20,6 +20,6 @@ class Location extends Model
      */
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'latitude' => 'float', 'longitude' => 'float', 'clock_radius_m' => 'integer'];
     }
 }

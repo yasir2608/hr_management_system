@@ -10,6 +10,9 @@ type Preferences = {
   insufficient_balance_rule: "block" | "allow_unpaid" | "exception";
   attendance_enabled: boolean;
   standard_hours_per_day: string | number;
+  attendance_restriction?: "none" | "network" | "location";
+  attendance_allowed_networks?: string[] | null;
+  attendance_restriction_message?: string | null;
   status: "not_started" | "skipped" | "confirmed";
 };
 
@@ -84,6 +87,27 @@ export function PreferencesTab() {
               Employees clock in and out in M.Y HRMS
             </label>
           </div>
+          {form.attendance_enabled && (
+            <>
+              <Field label="Where people can clock in from" optional hint="Optional. Explain the rule to employees below.">
+                <select value={form.attendance_restriction ?? "none"} onChange={(event) => setForm({ ...form, attendance_restriction: event.target.value as Preferences["attendance_restriction"] })}>
+                  <option value="none">Anywhere</option>
+                  <option value="network">Only from office networks</option>
+                  <option value="location">Only near their work location</option>
+                </select>
+              </Field>
+              {form.attendance_restriction === "network" && (
+                <Field label="Office networks" error={error?.errors.attendance_allowed_networks?.[0] ?? error?.errors["attendance_allowed_networks.0"]?.[0]} hint="IP addresses or ranges, comma separated, e.g. 203.0.113.0/24">
+                  <input className="input" value={(form.attendance_allowed_networks ?? []).join(", ")} onChange={(event) => setForm({ ...form, attendance_allowed_networks: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} />
+                </Field>
+              )}
+              {form.attendance_restriction !== "none" && (
+                <Field label="Explanation shown to employees" full hint={form.attendance_restriction === "location" ? "Set each location's position and radius in Locations & teams." : undefined}>
+                  <input className="input" value={form.attendance_restriction_message ?? ""} onChange={(event) => setForm({ ...form, attendance_restriction_message: event.target.value })} placeholder="e.g. Please clock in when you arrive at the office." />
+                </Field>
+              )}
+            </>
+          )}
         </div>
       </Panel>
     </form>
