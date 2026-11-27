@@ -15,6 +15,7 @@ use App\Models\Location;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
+use App\Onboarding\DefaultTemplate;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -63,6 +64,8 @@ class DemoSeeder extends Seeder
 
         // Sarah runs both companies, so she sees the company picker.
         StarterRoles::createFor($lahore);
+        DefaultTemplate::createFor($northstar);
+        DefaultTemplate::createFor($lahore);
         $this->member($lahore, User::query()->where('email', 'sarah@northstar.example')->firstOrFail(), Role::OWNER);
 
         $this->user('disabled@northstar.example', 'Former Employee', User::STATUS_DISABLED);

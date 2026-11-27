@@ -25,6 +25,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
@@ -134,6 +135,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/{import}/errors', [EmployeeImportController::class, 'errors'])->whereUlid('import');
             Route::post('/{import}/confirm', [EmployeeImportController::class, 'confirm'])->whereUlid('import');
             Route::get('/', [EmployeeImportController::class, 'index']);
+        });
+
+        // Onboarding
+        Route::middleware('permission:onboarding.manage')->prefix('onboarding')->group(function (): void {
+            Route::get('/templates', [OnboardingTemplateController::class, 'index']);
+            Route::post('/templates', [OnboardingTemplateController::class, 'store']);
+            Route::put('/templates/{template}', [OnboardingTemplateController::class, 'update']);
+            Route::post('/templates/{template}/default', [OnboardingTemplateController::class, 'makeDefault']);
+            Route::delete('/templates/{template}', [OnboardingTemplateController::class, 'destroy']);
         });
 
         // Users with access to the company
