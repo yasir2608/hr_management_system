@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
+import { BankFileModal, RunBankExportsPanel } from "@/components/payroll/BankFile";
 import { AdjustmentPanel, CorrectionBanners, CorrectRunModal, type Correction } from "@/components/payroll/Corrections";
 import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
 import { RunPayslipsPanel } from "@/components/payroll/Payslip";
@@ -39,6 +40,8 @@ function RunPage() {
   const { can, user } = useAuth();
   const [approving, setApproving] = useState(false);
   const [correcting, setCorrecting] = useState(false);
+  const [creatingBankFile, setCreatingBankFile] = useState(false);
+  const [bankFiles, setBankFiles] = useState(0);
   const [approvalNote, setApprovalNote] = useState("");
   const [run, setRun] = useState<Run | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -131,6 +134,7 @@ function RunPage() {
           {can("payroll.run") && ["draft", "calculated", "in_review"].includes(run.status) && <button className="btn" disabled={calculating} onClick={() => void refresh()}>Gather inputs again</button>}
           {run.status === "in_review" && run.approval.requires_second_review && !run.approval.second_reviewed_at && (can("payroll.run") || can("payroll.approve")) && run.approval.prepared_by_id !== user?.id && <button className="btn" onClick={() => void step("second-review", "Second review recorded.")}>Complete second review</button>}
           {run.status === "approved" && can("payroll.run") && <button className="btn" onClick={() => setCorrecting(true)}>Correct this run</button>}
+          {run.status === "approved" && can("payroll.export") && <button className="btn primary" onClick={() => setCreatingBankFile(true)}>Create bank file</button>}
           {run.status === "in_review" && can("payroll.approve") && <button className="btn primary" disabled={!issueSummary?.can_approve || (run.approval.requires_second_review && !run.approval.second_reviewed_at)} onClick={() => setApproving(true)}>Approve run</button>}
           {can("payroll.run") && run.status === "calculated" && (issueSummary?.blocking ?? 1) === 0 && <button className="btn primary" onClick={() => void submitForReview()}>Send for review</button>}
         </>}
@@ -149,6 +153,7 @@ function RunPage() {
       )}
       {run.status === "cancelled" && <Banner tone="error">This run was cancelled.</Banner>}
       <CorrectionBanners kind={run.kind} status={run.status} correction={run.correction} />
+      {creatingBankFile && <BankFileModal runId={run.id} onClose={() => setCreatingBankFile(false)} onCreated={(message) => { setCreatingBankFile(false); setNotice(message); setBankFiles((count) => count + 1); }} />}
       {correcting && <CorrectRunModal runId={run.id} employees={run.lines.filter((line) => line.included)} onClose={() => setCorrecting(false)} />}
       {run.status === "approved" && <Banner tone="success">Approved by {run.approval.approved_by ?? "—"} on {run.approval.approved_at ? formatDateTime(run.approval.approved_at) : "—"}{run.approval.note && ` (“${run.approval.note}”)`}. This run is locked: its figures, inputs and tax rule versions are kept exactly as approved.</Banner>}
       {run.status === "in_review" && run.approval.requires_second_review && <Banner tone="info">{run.approval.second_reviewed_at ? `Second review completed by ${run.approval.second_reviewed_by}.` : "This payroll needs a second review by someone other than the preparer before it can be approved."}</Banner>}
@@ -179,6 +184,7 @@ function RunPage() {
       )}
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
+      {run.status === "approved" && can("payroll.export") && <RunBankExportsPanel runId={run.id} version={bankFiles} />}
       {run.payslip_count > 0 && <RunPayslipsPanel runId={run.id} version={run.status} />}
       {run.kind === "adjustment" && run.totals?.adjustment && !run.amounts_restricted && <AdjustmentPanel lines={run.lines as never} totals={run.totals.adjustment} currency={run.currency} />}
       {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}

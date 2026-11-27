@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Payroll;
 use App\Access\Access;
 use App\Access\SensitiveData;
 use App\Http\Controllers\Controller;
+use App\Models\BankExport;
 use App\Models\BankFormat;
 use App\Models\CompanyPayrollCountry;
 use App\Models\Employee;
@@ -80,6 +81,8 @@ class BankFormatController extends Controller
 
     public function destroy(BankFormat $format): JsonResponse
     {
+        abort_if(BankExport::query()->where('bank_format_id', $format->id)->exists(), 422, 'Bank files have been created with this format, so it is kept for the record. Make it inactive instead.');
+
         $format->delete();
 
         if ($format->is_default) {

@@ -50,6 +50,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Payroll\BankExportController;
 use App\Http\Controllers\Payroll\BankFormatController;
 use App\Http\Controllers\Payroll\ImpactPreviewController;
 use App\Http\Controllers\Payroll\MyPayslipController;
@@ -338,6 +339,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::delete('/payroll/bank-formats/{format}', [BankFormatController::class, 'destroy'])->whereUlid('format');
         });
         Route::get('/payroll/bank-formats', [BankFormatController::class, 'index'])->middleware('permission:payroll.view,payroll.settings.manage,payroll.export');
+        Route::middleware('permission:payroll.export')->group(function (): void {
+            Route::get('/payroll/bank-exports', [BankExportController::class, 'index']);
+            Route::get('/payroll/bank-exports/{export}/download', [BankExportController::class, 'download'])->whereUlid('export');
+            Route::get('/payroll/runs/{run}/bank-file', [BankExportController::class, 'preview'])->whereUlid('run');
+            Route::post('/payroll/runs/{run}/bank-exports', [BankExportController::class, 'store'])->whereUlid('run');
+        });
         Route::middleware('permission:payroll.run')->group(function (): void {
             Route::post('/payroll/runs', [PayrollRunController::class, 'store']);
             Route::post('/payroll/runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->whereUlid('run');
