@@ -50,6 +50,7 @@ use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Platform\OverviewController as PlatformOverviewController;
 use App\Http\Controllers\Platform\SupportAccessController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -71,14 +72,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/auth/mfa', [MfaSettingsController::class, 'show']);
     Route::put('/auth/mfa', [MfaSettingsController::class, 'update']);
 
-    // M.Y HRMS operations staff only.
+    // M.Y HRMS operations staff only: changes.
     Route::middleware('platform:ops')->prefix('platform')->group(function (): void {
-        Route::get('/companies', [PlatformCompanyController::class, 'index']);
         Route::post('/companies', [PlatformCompanyController::class, 'store']);
     });
 
-    // Support access: any M.Y HRMS staff role (ops or support).
+    // Staff console: any M.Y HRMS staff role (ops or support) can view.
     Route::middleware('platform')->prefix('platform')->group(function (): void {
+        Route::get('/overview', [PlatformOverviewController::class, 'show']);
+        Route::get('/companies', [PlatformCompanyController::class, 'index']);
+        Route::get('/companies/{company}', [PlatformCompanyController::class, 'show'])->whereUlid('company');
         Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
         Route::get('/support-access', [SupportAccessController::class, 'index']);
         Route::post('/support-access', [SupportAccessController::class, 'store'])->middleware('throttle:20,1');

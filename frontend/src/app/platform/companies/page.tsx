@@ -1,25 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Banner, EmptyState, Field, formatDate, Modal, PageHead, Panel, Table } from "@/components/ui";
+import { useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
 import { COUNTRIES, countryName } from "@/lib/countries";
 
-type CompanyRow = { id: string; name: string; country_code: string; status: string; member_count: number; created_at: string };
+type CompanyRow = { id: string; name: string; country_code: string; status: string; member_count: number; employee_count: number; last_activity_at: string | null; created_at: string };
 
 const blank = { company: { name: "", legal_name: "", country_code: "", contact_email: "" }, admin: { name: "", email: "" } };
 
 export default function PlatformCompaniesPage() {
+  const { user } = useAuth();
+  const isOps = user?.platform_role === "ops";
   const [companies, setCompanies] = useState<CompanyRow[] | null>(null);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(blank);
   const [error, setError] = useState<ApiError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    api<{ data: CompanyRow[] }>("/platform/companies", { query: { search }, noCompany: true }).then((result) => setCompanies(result.data));
-  }, [search]);
+    api<{ data: CompanyRow[] }>("/platform/companies", { query: { search, status }, noCompany: true }).then((result) => setCompanies(result.data));
+  }, [search, status]);
 
   useEffect(load, [load]);
 
@@ -44,19 +49,30 @@ export default function PlatformCompaniesPage() {
         eyebrow="Platform operations"
         title="Customer companies"
         subtitle="Create company accounts for customers and see who is set up."
-        actions={<button className="btn primary" onClick={() => setCreating(true)}>Create company</button>}
+        actions={isOps && <button className="btn primary" onClick={() => setCreating(true)}>Create company</button>}
       />
       {notice && <Banner tone="success">{notice}</Banner>}
-      <Panel title="Companies" right={<input className="input" style={{ width: 220 }} placeholder="Search by name" value={search} onChange={(event) => setSearch(event.target.value)} />} bodyless>
+      <Panel title="Companies" right={
+          <div className="row">
+            <input className="input" style={{ width: 220 }} placeholder="Search by name" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <select style={{ width: 130 }} value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Status">
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+        } bodyless>
         {companies && companies.length === 0 ? (
           <EmptyState title="No companies found" />
         ) : (
-          <Table headers={["Company", "Country", "Active members", "Status", "Created"]}>
+          <Table headers={["Company", "Country", "Active users", "Employees", "Last activity", "Status", "Created"]}>
             {companies?.map((company) => (
               <tr key={company.id}>
-                <td><strong>{company.name}</strong></td>
+                <td><Link href={`/platform/companies/${company.id}`}><strong>{company.name}</strong></Link></td>
                 <td>{countryName(company.country_code)}</td>
                 <td>{company.member_count}</td>
+                <td>{company.employee_count}</td>
+                <td>{company.last_activity_at ? formatDate(company.last_activity_at) : "—"}</td>
                 <td><Badge status={company.status} /></td>
                 <td>{formatDate(company.created_at)}</td>
               </tr>

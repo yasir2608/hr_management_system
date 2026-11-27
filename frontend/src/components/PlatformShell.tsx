@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { initials } from "./ui";
 
 export const platformNav = [
+  { href: "/platform/overview", label: "Overview", icon: "◉" },
   { href: "/platform/companies", label: "Customer companies", icon: "▣" },
   { href: "/platform/support", label: "Support access", icon: "⚑" },
 ];
@@ -42,7 +43,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
           <div className="logo">MY</div>
           <div>
             <b>M.Y HRMS</b>
-            <small>Platform operations</small>
+            <small>Staff console</small>
           </div>
         </div>
         <nav className="navgroup" aria-label="Operations">
@@ -58,7 +59,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
       </aside>
       <main className="main">
         <header className="top">
-          <div className="crumb">Platform operations</div>
+          <div className="crumb">Staff console</div>
           <div className="topright">
             <span className="env">{user.platform_role === "ops" ? "Operations" : "Support"}</span>
             <span className="avatar">{initials(user.name)}</span>

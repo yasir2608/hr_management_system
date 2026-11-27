@@ -44,7 +44,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     // People in several companies choose one first; one company opens straight away.
-    router.replace(company ? nextPath() : user?.platform_role ? "/platform/companies" : "/select-company");
+    router.replace(company ? nextPath() : user?.platform_role ? "/platform/overview" : "/select-company");
   }, [status, user, company, router]);
 
   async function submit(event: React.FormEvent) {

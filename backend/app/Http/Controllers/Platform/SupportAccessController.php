@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\PlatformActivity;
 use App\Models\SupportAccessGrant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,10 @@ class SupportAccessController extends Controller
 
     private function log(SupportAccessGrant $grant, string $action, string $description, Request $request): void
     {
+        PlatformActivity::record($action, $description.' to '.$grant->company->name, $grant->company_id, null, [
+            'reason' => $grant->reason, 'ticket_reference' => $grant->ticket_reference, 'expires_at' => $grant->expires_at->toIso8601String(),
+        ]);
+
         ActivityLog::query()->create([
             'company_id' => $grant->company_id,
             'actor_user_id' => $request->user()->id,
