@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ContractorForm, type Contractor, type ContractorField } from "@/components/contractors/ContractorForm";
+import { ContractsPanel } from "@/components/contractors/ContractsPanel";
 import { Guard } from "@/components/Guard";
 import { Badge, Banner, Field, PageHead, Panel } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -55,6 +56,7 @@ function ContractorPage() {
           ))}
         </Panel>
       </div>
+      <ContractsPanel contractorId={contractor.id} canManage={can("contractors.manage")} />
       {editing && <ContractorForm contractor={contractor} fields={contractor.fields} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setNotice("Saved."); load(); }} />}
     </>
   );
