@@ -13,8 +13,11 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Models\Team;
+use App\Support\CsvExport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
@@ -23,7 +26,58 @@ class EmployeeController extends Controller
      */
     public function index(Request $request, Access $access): JsonResponse
     {
-        $filters = $request->validate([
+        $filters = $this->listFilters($request);
+        $scoped = fn () => $access->scopeFor('employees.view')->apply(Employee::query());
+        $query = $this->listQuery($filters, $access);
+        $page = $query->paginate($filters['per_page'] ?? 25);
+
+        return response()->json([
+            'data' => collect($page->items())->map(fn (Employee $employee): array => EmployeePresenter::summary($employee)),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'per_page' => $page->perPage()],
+            // Counts respect the viewer's scope too.
+            'status_counts' => $scoped()->selectRaw('current_status, count(*) as total')->groupBy('current_status')->pluck('total', 'current_status'),
+        ]);
+    }
+
+    /**
+     * The directory as a CSV: the same people, filters and order as the screen, with the date and filters in the file.
+     */
+    public function export(Request $request, Access $access): StreamedResponse
+    {
+        $filters = $this->listFilters($request);
+        $employees = $this->listQuery($filters, $access)->limit(10000)->get();
+        $name = fn (string $model, ?string $id): ?string => $id === null ? null : $model::query()->find($id)?->name;
+
+        return (new CsvExport('Employee list'))
+            ->filters([
+                'Search' => $filters['search'] ?? null,
+                'Status' => isset($filters['status']) ? collect(explode(',', $filters['status']))->map(fn (string $status): string => ucfirst(str_replace('_', ' ', $status)))->join(', ') : 'Current (not ended)',
+                'Department' => $name(Department::class, $filters['department_id'] ?? null),
+                'Team' => $name(Team::class, $filters['team_id'] ?? null),
+                'Location' => $name(Location::class, $filters['location_id'] ?? null),
+                'Work country' => isset($filters['work_country']) ? (config('countries.'.strtoupper($filters['work_country']).'.name') ?? strtoupper($filters['work_country'])) : null,
+            ])
+            ->notice($access->scopeFor('employees.view')->wholeCompany ? null : 'Only the employees your access covers are included.')
+            ->table(
+                ['Employee number', 'Name', 'Work email', 'Job title', 'Department', 'Team', 'Location', 'Manager', 'Status', 'Employment type', 'Work arrangement', 'Work country', 'Start date', 'End date'],
+                $employees->map(fn (Employee $employee): array => [
+                    $employee->employee_number, $employee->fullName(), $employee->work_email, $employee->current_job_title,
+                    $employee->department?->name, $employee->team?->name, $employee->location?->name, $employee->manager?->fullName(),
+                    ucfirst(str_replace('_', ' ', (string) $employee->current_status)), $employee->current_employment_type ? ucfirst(str_replace('_', ' ', $employee->current_employment_type)) : null,
+                    $employee->current_work_arrangement ? ucfirst(str_replace('_', ' ', $employee->current_work_arrangement)) : null,
+                    $employee->work_country, $employee->start_date?->toDateString(), $employee->end_date?->toDateString(),
+                ])->all(),
+            )
+            ->logged('employee.list_exported', "Employee list exported ({$employees->count()} people)", ['rows' => $employees->count()])
+            ->download('employees-'.now()->toDateString());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function listFilters(Request $request): array
+    {
+        return $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'department_id' => ['nullable', 'string'],
@@ -33,10 +87,17 @@ class EmployeeController extends Controller
             'sort' => ['nullable', 'in:name,start_date,employee_number'],
             'per_page' => ['nullable', 'integer', 'between:5,200'],
         ]);
+    }
 
-        $scoped = fn () => $access->scopeFor('employees.view')->apply(Employee::query());
-
-        $query = $scoped()
+    /**
+     * People within the viewer's scope, filtered and ordered as on the directory.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Employee>
+     */
+    private function listQuery(array $filters, Access $access): Builder
+    {
+        $query = $access->scopeFor('employees.view')->apply(Employee::query())
             ->with(['department:id,name', 'team:id,name', 'location:id,name', 'manager'])
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
@@ -57,14 +118,7 @@ class EmployeeController extends Controller
             default => $query->orderBy('first_name')->orderBy('last_name'),
         };
 
-        $page = $query->paginate($filters['per_page'] ?? 25);
-
-        return response()->json([
-            'data' => collect($page->items())->map(fn (Employee $employee): array => EmployeePresenter::summary($employee)),
-            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'per_page' => $page->perPage()],
-            // Counts respect the viewer's scope too.
-            'status_counts' => $scoped()->selectRaw('current_status, count(*) as total')->groupBy('current_status')->pluck('total', 'current_status'),
-        ]);
+        return $query;
     }
 
     /**

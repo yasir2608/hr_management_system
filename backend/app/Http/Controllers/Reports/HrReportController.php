@@ -7,11 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Support\CsvExport;
 use App\Tenancy\CurrentCompany;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * HR reports for people with HR report access. Each report echoes its date and filters so it can be understood later.
@@ -32,6 +34,37 @@ class HrReportController extends Controller
     }
 
     public function show(Request $request, string $type, CurrentCompany $company): JsonResponse
+    {
+        return response()->json($this->report($request, $type, $company));
+    }
+
+    /**
+     * The same report as a CSV, with its date and filters. It covers exactly the people the screen shows.
+     */
+    public function export(Request $request, string $type, CurrentCompany $company): StreamedResponse
+    {
+        $report = $this->report($request, $type, $company);
+        $filters = $report['filters'];
+        $csv = (new CsvExport($report['name']))->filters(array_filter([
+            'Date' => $filters['as_of'],
+            'Period' => $filters['from'] ? "{$filters['from']} to {$filters['to']}" : null,
+        ]) + ['Department' => $filters['department'], 'Location' => $filters['location'], 'Work country' => $filters['country']]);
+        foreach ($report['notes'] as $note) {
+            $csv->notice($note);
+        }
+        $csv->table(['Measure', 'Value'], array_map(fn (array $stat): array => [$stat['label'], $stat['value']], $report['stats']), title: 'Summary');
+        foreach ($report['sections'] as $section) {
+            $csv->keyedTable($section['columns'], $section['rows'], $section['totals'], $section['title']);
+        }
+
+        return $csv->logged('report.exported', "{$report['name']} report exported", ['report' => $type])
+            ->download('hr-'.str_replace('_', '-', $type).'-'.now()->toDateString());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function report(Request $request, string $type, CurrentCompany $company): array
     {
         $data = $request->validate([
             'department_id' => ['nullable', 'ulid', Rule::exists(Department::class, 'id')->where('company_id', $company->id())],
@@ -55,7 +88,7 @@ class HrReportController extends Controller
 
         $report = $this->reports->build($type, $filters);
 
-        return response()->json([
+        return [
             ...$report,
             'generated_at' => now()->toIso8601String(),
             'filters' => [
@@ -66,6 +99,6 @@ class HrReportController extends Controller
                 'from' => in_array('range', $report['uses'], true) ? $filters['from']->toDateString() : null,
                 'to' => in_array('range', $report['uses'], true) ? $filters['to']->toDateString() : null,
             ],
-        ]);
+        ];
     }
 }

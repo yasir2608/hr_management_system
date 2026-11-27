@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { Banner, EmptyState, Field, PageHead, Panel, Stat, Table, formatDate, formatDateTime } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 type ReportType = { key: string; name: string; description: string; uses: ("as_of" | "range")[] };
@@ -40,24 +40,34 @@ function HrReportsPage() {
 
   const chosen = options?.types.find((type) => type.key === filters.type);
 
+  const query = useCallback(() => ({
+    ...(filters.department_id ? { department_id: filters.department_id } : {}),
+    ...(filters.location_id ? { location_id: filters.location_id } : {}),
+    ...(filters.country ? { country: filters.country } : {}),
+    ...(chosen?.uses.includes("as_of") ? { as_of: filters.as_of } : {}),
+    ...(chosen?.uses.includes("range") ? { from: filters.from, to: filters.to } : {}),
+  }), [chosen, filters]);
+
+  async function exportCsv() {
+    if (!chosen) return;
+    setError(null);
+    try {
+      await download(`/reports/hr/${chosen.key}/export`, query());
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught : new ApiError("Could not export the report.", 0));
+    }
+  }
+
   const load = useCallback(async () => {
     if (!chosen) return;
     setError(null);
     try {
-      setReport(await api<Report>(`/reports/hr/${chosen.key}`, {
-        query: {
-          ...(filters.department_id ? { department_id: filters.department_id } : {}),
-          ...(filters.location_id ? { location_id: filters.location_id } : {}),
-          ...(filters.country ? { country: filters.country } : {}),
-          ...(chosen.uses.includes("as_of") ? { as_of: filters.as_of } : {}),
-          ...(chosen.uses.includes("range") ? { from: filters.from, to: filters.to } : {}),
-        },
-      }));
+      setReport(await api<Report>(`/reports/hr/${chosen.key}`, { query: query() }));
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : new ApiError("Could not build the report.", 0));
       setReport(null);
     }
-  }, [chosen, filters]);
+  }, [chosen, query]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- rebuild when the report or filters change
@@ -133,6 +143,7 @@ function HrReportsPage() {
         <>
           <div className="tiny" style={{ margin: "0 0 12px" }}>
             <strong>{report.name}</strong> · generated {formatDateTime(report.generated_at)}{appliedFilters.length > 0 && <> · {appliedFilters.join(" · ")}</>}
+            {" "}<button className="btn soft" style={{ marginLeft: 8 }} onClick={() => void exportCsv()}>Export CSV</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14, marginBottom: 16 }}>
             {report.stats.map((stat) => <Stat key={stat.label} label={stat.label} value={stat.value} note={stat.note} />)}

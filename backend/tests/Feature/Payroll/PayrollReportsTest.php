@@ -149,8 +149,9 @@ class PayrollReportsTest extends TestCase
         $rows = array_map('str_getcsv', array_values(array_filter(explode("\n", ltrim($response->streamedContent(), "\xEF\xBB\xBF")), fn (string $line): bool => trim($line) !== '')));
 
         $this->assertSame(['Payroll register'], $rows[0]);
-        $this->assertSame(['United Kingdom, pay dates 2026-01-01 to 2026-12-31, GBP'], $rows[1]);
-        $this->assertSame('Pay date', $rows[3][0]);
+        $this->assertSame(['Filters', 'Country: United Kingdom; Payroll group: All; Pay dates: 2026-01-01 to 2026-12-31; Currency: GBP'], $rows[2]);
+        $this->assertSame('Generated', $rows[1][0]);
+        $this->assertContains('Pay date', array_column($rows, 0));
         $this->assertSame(['Total', '', '', '', '', '6000.00', '6000.00', '1200.00', '4800.00', '600.00', '6600.00'], end($rows));
 
         $log = $this->asCompany(fn () => ActivityLog::query()->where('action', 'payroll.report_downloaded')->firstOrFail());

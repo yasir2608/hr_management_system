@@ -36,14 +36,25 @@ class ContractorListsTest extends TestCase
         return array_map(fn (string $line): array => str_getcsv($line, ',', '"', ''), explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     }
 
+    /**
+     * @param  list<list<string>>  $rows
+     */
+    private function headerIndex(array $rows, string $firstColumn): int
+    {
+        return (int) array_search($firstColumn, array_column($rows, 0), true);
+    }
+
     public function test_the_contractor_list_says_contractors_are_not_paid_through_payroll(): void
     {
         $rows = $this->rows($this->inCompany()->get('/api/contractors/export')->assertOk()->assertDownload('contractors.csv')->streamedContent());
+        $header = $this->headerIndex($rows, 'Name');
 
-        $this->assertSame(ContractorReportController::NOTICE, $rows[0][0]);
-        $this->assertSame('Paid through payroll', $rows[2][7]);
-        $this->assertSame(['Brightside Studio', 'Supplier'], array_slice($rows[3], 0, 2));
-        $this->assertSame('No — paid outside payroll', $rows[3][7]);
+        $this->assertSame(['Contractor list', 'Generated', 'Filters'], [$rows[0][0], $rows[1][0], $rows[2][0]]);
+        $this->assertSame('Status: All', $rows[2][1]);
+        $this->assertContains(ContractorReportController::NOTICE, array_column($rows, 0));
+        $this->assertSame('Paid through payroll', $rows[$header][7]);
+        $this->assertSame(['Brightside Studio', 'Supplier'], array_slice($rows[$header + 1], 0, 2));
+        $this->assertSame('No — paid outside payroll', $rows[$header + 1][7]);
         $this->assertDatabaseHas('activity_log', ['action' => 'contractor.list_exported']);
     }
 
@@ -51,9 +62,12 @@ class ContractorListsTest extends TestCase
     {
         $rows = $this->rows($this->inCompany()->get('/api/contractor-invoices/export?status=paid')->assertOk()->streamedContent());
 
-        $this->assertSame(ContractorReportController::NOTICE, $rows[0][0]);
-        $this->assertSame(['Brightside Studio', 'INV-1'], array_slice($rows[3], 0, 2));
-        $this->assertSame(['2026-02-10', 'Bank transfer', 'BACS-1', 'No — paid outside payroll'], array_slice($rows[3], 8));
+        $header = $this->headerIndex($rows, 'Contractor');
+
+        $this->assertSame('Status: Paid', $rows[2][1]);
+        $this->assertContains(ContractorReportController::NOTICE, array_column($rows, 0));
+        $this->assertSame(['Brightside Studio', 'INV-1'], array_slice($rows[$header + 1], 0, 2));
+        $this->assertSame(['2026-02-10', 'Bank transfer', 'BACS-1', 'No — paid outside payroll'], array_slice($rows[$header + 1], 8));
     }
 
     public function test_people_without_contractor_access_cannot_export(): void

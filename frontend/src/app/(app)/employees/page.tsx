@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { Badge, Banner, EmptyState, formatDate, PageHead, Panel, Person, Stat, Table } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { COUNTRIES, countryName } from "@/lib/countries";
 import { statusLabel, type Employee } from "@/lib/employees";
@@ -61,6 +61,7 @@ function EmployeesPage() {
         subtitle="Keep employee details, employment history and payroll readiness in one place."
         actions={
           <>
+            {can("employees.view") && <button className="btn" title="Downloads the people shown, with these filters" onClick={() => void download("/employees/export", filters)}>Export CSV</button>}
             {can("employees.import") && <Link className="btn" href="/employees/import">Import</Link>}
             {can("employees.manage") && <Link className="btn primary" href="/employees/new">Add employee</Link>}
           </>

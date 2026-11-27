@@ -170,6 +170,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Employees
         Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view,employees.manage');
+        Route::get('/employees/export', [EmployeeController::class, 'export'])->middleware('permission:employees.view,employees.manage');
         Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->whereUlid('employee');
         Route::put('/employees/{employee}', [EmployeeChangeController::class, 'updateDetails'])->whereUlid('employee');
         Route::post('/employees/{employee}/changes', [EmployeeChangeController::class, 'recordChange'])->whereUlid('employee');
@@ -222,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::middleware('permission:reports.hr.view')->group(function (): void {
             Route::get('/reports/hr', [HrReportController::class, 'options']);
             Route::get('/reports/hr/{type}', [HrReportController::class, 'show'])->whereIn('type', array_keys(HrReports::TYPES));
+            Route::get('/reports/hr/{type}/export', [HrReportController::class, 'export'])->whereIn('type', array_keys(HrReports::TYPES));
         });
 
         Route::get('/approvals', [ApprovalInboxController::class, 'index']);
