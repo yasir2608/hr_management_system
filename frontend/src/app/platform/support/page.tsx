@@ -55,7 +55,7 @@ export default function SupportAccessPage() {
 
   return (
     <>
-      <PageHead eyebrow="Platform operations" title="Support access" subtitle="Open time-limited, read-only access to a customer company. Your reason and every page you view are visible to the company." />
+      <PageHead eyebrow="Staff console" title="Support access" subtitle="Open time-limited, read-only access to a customer company. Your reason and every page you view are visible to the company." />
       {notice && <Banner tone="success">{notice}</Banner>}
       <div className="grid two">
         <Panel title="Your access" bodyless>

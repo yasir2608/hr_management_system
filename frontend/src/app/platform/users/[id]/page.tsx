@@ -64,7 +64,7 @@ export default function PlatformUserPage() {
         title={user.name}
         subtitle={`${user.email} · account since ${formatDate(user.created_at)}`}
         actions={<>
-          <Link className="btn" href="/platform/users">All users</Link>
+          <Link className="btn" href="/users">All users</Link>
           {isOps && <button className="btn" onClick={() => setAction("mfa-reset")}>Reset two-step sign-in</button>}
           {isOps && (locked ? <button className="btn primary" onClick={() => setAction("unlock")}>Unlock sign-in</button> : <button className="btn danger" onClick={() => setAction("lock")}>Lock sign-in</button>)}
         </>}
@@ -83,7 +83,7 @@ export default function PlatformUserPage() {
           <Table headers={["Company", "Roles", "Joined", "Access"]}>
             {detail.memberships.map((membership) => (
               <tr key={membership.id}>
-                <td>{membership.company ? <Link href={`/platform/companies/${membership.company.id}`}>{membership.company.name}</Link> : "—"}{membership.company?.status === "suspended" && <div className="tiny">Company suspended</div>}</td>
+                <td>{membership.company ? <Link href={`/companies/${membership.company.id}`}>{membership.company.name}</Link> : "—"}{membership.company?.status === "suspended" && <div className="tiny">Company suspended</div>}</td>
                 <td>{membership.roles.join(", ") || "—"}</td>
                 <td>{formatDate(membership.joined_at)}</td>
                 <td><Badge status={membership.status} /></td>

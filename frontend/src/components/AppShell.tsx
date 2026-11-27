@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="tiny">Your account is not linked to an active company workspace. Contact your company administrator.</div>
           </div>
           <div className="stack">
-            {user.platform_role && <Link className="btn primary block" style={{ textAlign: "center" }} href="/platform/overview">Go to the staff console</Link>}
+            {user.platform_role && <Link className="btn primary block" style={{ textAlign: "center" }} href="/overview">Go to the staff console</Link>}
             <button className="btn block" onClick={() => void signOut()}>Sign out</button>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {company.membership_status === "support" && (
             <div className="banner info" role="status">
               M.Y HRMS support access · read-only until {new Date(company.support_access_until ?? "").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. Every page you open is recorded for {company.name}.{" "}
-              <Link className="link" href="/platform/support">Back to operations</Link>
+              <Link className="link" href="/support">Back to operations</Link>
             </div>
           )}
           {children}

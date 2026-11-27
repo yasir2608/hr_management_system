@@ -46,7 +46,7 @@ export default function PlatformCompaniesPage() {
   return (
     <>
       <PageHead
-        eyebrow="Platform operations"
+        eyebrow="Staff console"
         title="Customer companies"
         subtitle="Create company accounts for customers and see who is set up."
         actions={isOps && <button className="btn primary" onClick={() => setCreating(true)}>Create company</button>}
@@ -68,7 +68,7 @@ export default function PlatformCompaniesPage() {
           <Table headers={["Company", "Country", "Active users", "Employees", "Last activity", "Status", "Created"]}>
             {companies?.map((company) => (
               <tr key={company.id}>
-                <td><Link href={`/platform/companies/${company.id}`}><strong>{company.name}</strong></Link></td>
+                <td><Link href={`/companies/${company.id}`}><strong>{company.name}</strong></Link></td>
                 <td>{countryName(company.country_code)}</td>
                 <td>{company.member_count}</td>
                 <td>{company.employee_count}</td>

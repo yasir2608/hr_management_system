@@ -53,7 +53,7 @@ export default function PlatformCompanyPage() {
   return (
     <>
       <PageHead eyebrow="Customer company" title={company.name} subtitle={`${countryName(company.country_code)} · customer since ${formatDate(company.created_at)}`} actions={<>
-        <Link className="btn" href="/platform/companies">All companies</Link>
+        <Link className="btn" href="/companies">All companies</Link>
         {isOps && (company.status === "suspended"
           ? <button className="btn primary" onClick={() => setChanging("reactivate")}>Reactivate</button>
           : <button className="btn danger" onClick={() => setChanging("suspend")}>Suspend company</button>)}

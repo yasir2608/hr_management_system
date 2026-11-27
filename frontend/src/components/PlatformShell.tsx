@@ -4,15 +4,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { APP_URL } from "@/lib/portal";
 import { initials } from "./ui";
 
 export const platformNav = [
-  { href: "/platform/overview", label: "Overview", icon: "◉" },
-  { href: "/platform/companies", label: "Customer companies", icon: "▣" },
-  { href: "/platform/users", label: "Customer users", icon: "◎" },
-  { href: "/platform/support", label: "Support access", icon: "⚑" },
-  { href: "/platform/activity", label: "Platform activity", icon: "≡" },
-  { href: "/platform/health", label: "System health", icon: "♥" },
+  { href: "/overview", label: "Overview", icon: "◉" },
+  { href: "/companies", label: "Customer companies", icon: "▣" },
+  { href: "/users", label: "Customer users", icon: "◎" },
+  { href: "/support", label: "Support access", icon: "⚑" },
+  { href: "/activity", label: "Platform activity", icon: "≡" },
+  { href: "/health", label: "System health", icon: "♥" },
 ];
 
 /** Layout for M.Y HRMS operations staff. Not tied to any one company. */
@@ -33,7 +34,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
         <div className="empty">
           <div className="emptyicon">⌑</div>
           <h3>This area is only for M.Y HRMS operations staff</h3>
-          <Link className="btn" href="/dashboard">Back to your workspace</Link>
+          <a className="btn" href={`${APP_URL}/login`}>Go to your company sign-in</a>
         </div>
       </div>
     );

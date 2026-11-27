@@ -38,7 +38,7 @@ export default function PlatformOverviewPage() {
             <Table headers={["Company", "Why", "Status"]}>
               {overview.attention.map((company) => (
                 <tr key={company.id}>
-                  <td><Link href={`/platform/companies/${company.id}`}>{company.name}</Link></td>
+                  <td><Link href={`/companies/${company.id}`}>{company.name}</Link></td>
                   <td>{company.reasons.join(" · ")}</td>
                   <td><Badge status={company.status} /></td>
                 </tr>
@@ -50,7 +50,7 @@ export default function PlatformOverviewPage() {
           <Table headers={["Company", "Country", "Created", "Status"]}>
             {overview.recent_companies.map((company) => (
               <tr key={company.id}>
-                <td><Link href={`/platform/companies/${company.id}`}>{company.name}</Link></td>
+                <td><Link href={`/companies/${company.id}`}>{company.name}</Link></td>
                 <td>{countryName(company.country_code)}</td>
                 <td>{formatDate(company.created_at)}</td>
                 <td><Badge status={company.status} /></td>
@@ -67,7 +67,7 @@ export default function PlatformOverviewPage() {
                 <td>{formatDateTime(entry.created_at)}</td>
                 <td>{entry.actor ?? "—"}</td>
                 <td>{entry.description}</td>
-                <td>{entry.company ? <Link href={`/platform/companies/${entry.company.id}`}>{entry.company.name}</Link> : "—"}</td>
+                <td>{entry.company ? <Link href={`/companies/${entry.company.id}`}>{entry.company.name}</Link> : "—"}</td>
               </tr>
             ))}
           </Table>

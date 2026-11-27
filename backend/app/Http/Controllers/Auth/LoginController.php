@@ -24,6 +24,7 @@ class LoginController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:255'],
+            'portal' => ['nullable', 'in:staff,company'],
         ]);
 
         $email = Str::lower(trim($credentials['email']));
@@ -58,6 +59,19 @@ class LoginController extends Controller
         }
 
         RateLimiter::clear($throttleKey);
+
+        // Staff use the staff console and customers use the company address; each refuses the other.
+        $portal = $credentials['portal'] ?? null;
+        if ($portal === 'staff' && $user->platform_role === null) {
+            LoginAttempt::record($request, $email, $user, LoginAttempt::REASON_WRONG_PORTAL);
+
+            return $this->fail('This sign-in is only for M.Y HRMS staff. Sign in to your company at '.config('app.frontend_url').'.', 'NOT_STAFF', 403);
+        }
+        if ($portal === 'company' && $user->platform_role !== null) {
+            LoginAttempt::record($request, $email, $user, LoginAttempt::REASON_WRONG_PORTAL);
+
+            return $this->fail('M.Y HRMS staff sign in at the staff console: '.config('app.admin_url').'.', 'USE_STAFF_CONSOLE', 403);
+        }
 
         if (SsoController::enabledFor($user->email)?->is_enforced) {
             LoginAttempt::record($request, $email, $user, LoginAttempt::REASON_SSO_REQUIRED);

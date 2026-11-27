@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, ApiError, onApiError, session } from "./api";
+import { currentPortal } from "./portal";
 import type { CompanyChoice, SessionUser } from "./types";
 
 type Status = "loading" | "guest" | "authenticated";
@@ -104,7 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string): Promise<SignInResult> => {
-      const result = await api<SignInResponse>("/auth/login", { body: { email, password }, noCompany: true });
+      // The backend refuses staff accounts on the company address and customer accounts on the staff console.
+      const result = await api<SignInResponse>("/auth/login", { body: { email, password, portal: currentPortal() }, noCompany: true });
       if ("mfa_required" in result) return { mfa: { challengeId: result.challenge_id, message: result.message } };
       session.setToken(result.token);
       adopt(result.user);

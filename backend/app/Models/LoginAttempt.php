@@ -31,6 +31,9 @@ class LoginAttempt extends Model
 
     public const REASON_SSO_REQUIRED = 'sso_required';
 
+    /** A staff account on the company sign-in, or a customer account on the staff console. */
+    public const REASON_WRONG_PORTAL = 'wrong_portal';
+
     /**
      * @return array<string, string>
      */

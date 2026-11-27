@@ -37,7 +37,7 @@ export default function PlatformUsersPage() {
           <Table headers={["Person", "Companies", "Two-step sign-in", "Last sign-in", "Sign-in"]}>
             {users?.map((user) => (
               <tr key={user.id}>
-                <td><Link href={`/platform/users/${user.id}`} style={{ textDecoration: "none" }}><Person name={user.name} detail={user.email} /></Link></td>
+                <td><Link href={`/users/${user.id}`} style={{ textDecoration: "none" }}><Person name={user.name} detail={user.email} /></Link></td>
                 <td>{user.company_count}</td>
                 <td>{user.mfa_enabled ? "On" : "Off"}</td>
                 <td>{user.last_login_at ? formatDateTime(user.last_login_at) : "Never"}</td>

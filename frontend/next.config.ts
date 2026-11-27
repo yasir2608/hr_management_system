@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // The staff console is served on admin.localhost in development (see src/proxy.ts).
+  allowedDevOrigins: ["admin.localhost"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Banner, Field } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ADMIN_URL, APP_URL, currentPortal } from "@/lib/portal";
+
+const noSubscription = () => () => undefined;
 
 function nextPath() {
   const next = new URLSearchParams(window.location.search).get("next");
@@ -19,6 +22,9 @@ function asApiError(caught: unknown) {
 
 export default function LoginPage() {
   const { status, user, company, signIn, verifyMfa } = useAuth();
+  // Known only in the browser (from the address), so the server renders a placeholder.
+  const portal = useSyncExternalStore(noSubscription, currentPortal, () => null);
+  const isStaff = portal === "staff";
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +50,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     // People in several companies choose one first; one company opens straight away.
-    router.replace(company ? nextPath() : user?.platform_role ? "/platform/overview" : "/select-company");
+    router.replace(user?.platform_role ? "/overview" : company ? nextPath() : "/select-company");
   }, [status, user, company, router]);
 
   async function submit(event: React.FormEvent) {
@@ -104,6 +110,8 @@ export default function LoginPage() {
     }
   }
 
+  if (portal === null) return <div className="loadingpage">Loading…</div>;
+
   if (challenge) {
     return (
       <div className="authwrap">
@@ -144,13 +152,15 @@ export default function LoginPage() {
       <form className="panel authcard" onSubmit={submit} noValidate>
         <div className="authhead">
           <div className="logo" style={{ margin: "auto" }}>MY</div>
-          <h2>Welcome back</h2>
-          <div className="tiny">Sign in to your M.Y HRMS workspace</div>
+          <h2>{isStaff ? "Staff console" : "Welcome back"}</h2>
+          <div className="tiny">{isStaff ? "Sign-in for M.Y HRMS staff only" : "Sign in to your M.Y HRMS workspace"}</div>
         </div>
         {sessionEnded && !error && <Banner tone="info">Your session ended, either after a period of inactivity or because your password changed. Sign in again to continue.</Banner>}
         {error && (
           <Banner tone="error">
             {error.message}
+            {error.code === "USE_STAFF_CONSOLE" && <> <a className="link" href={`${ADMIN_URL}/login`}>Open the staff console</a></>}
+            {error.code === "NOT_STAFF" && <> <a className="link" href={`${APP_URL}/login`}>Go to your company sign-in</a></>}
             {error.code === "ACCOUNT_LOCKED" && (
               <>
                 {" "}
@@ -173,13 +183,21 @@ export default function LoginPage() {
           <button className="btn primary block" type="submit" disabled={submitting || !email || !password}>
             {submitting ? "Signing in…" : "Sign in"}
           </button>
-          <button className="btn block" type="button" onClick={() => void continueWithSso()} disabled={submitting}>
-            Continue with company SSO
-          </button>
-          {ssoNotice && <div className="tiny" style={{ textAlign: "center" }}>{ssoNotice}</div>}
-          <div className="tiny" style={{ textAlign: "center" }}>
-            New to M.Y HRMS? <Link className="link" href="/register">Set up a company workspace</Link>
-          </div>
+          {isStaff ? (
+            <div className="tiny" style={{ textAlign: "center" }}>
+              Signing in to your company? <a className="link" href={`${APP_URL}/login`}>Use the company sign-in</a>
+            </div>
+          ) : (
+            <>
+              <button className="btn block" type="button" onClick={() => void continueWithSso()} disabled={submitting}>
+                Continue with company SSO
+              </button>
+              {ssoNotice && <div className="tiny" style={{ textAlign: "center" }}>{ssoNotice}</div>}
+              <div className="tiny" style={{ textAlign: "center" }}>
+                New to M.Y HRMS? <Link className="link" href="/register">Set up a company workspace</Link>
+              </div>
+            </>
+          )}
         </div>
       </form>
     </div>

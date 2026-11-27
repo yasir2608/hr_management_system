@@ -67,8 +67,8 @@ export default function PlatformActivityPage() {
                 <td>{entry.actor?.name ?? "—"}</td>
                 <td>{entry.description}<div className="tiny">{entry.action}</div></td>
                 <td>
-                  {entry.company && <Link href={`/platform/companies/${entry.company.id}`}>{entry.company.name}</Link>}
-                  {entry.target_user && <div><Link href={`/platform/users/${entry.target_user.id}`}>{entry.target_user.email}</Link></div>}
+                  {entry.company && <Link href={`/companies/${entry.company.id}`}>{entry.company.name}</Link>}
+                  {entry.target_user && <div><Link href={`/users/${entry.target_user.id}`}>{entry.target_user.email}</Link></div>}
                   {!entry.company && !entry.target_user && "—"}
                 </td>
                 <td>{entry.properties?.reason ?? "—"}{entry.properties?.ticket_reference && <div className="tiny">Ticket {entry.properties.ticket_reference}</div>}</td>

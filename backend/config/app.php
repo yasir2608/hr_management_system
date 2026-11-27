@@ -57,6 +57,9 @@ return [
     // The Next.js app; links in emails (password reset, invitations) point here.
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
+    // The M.Y HRMS staff console (same frontend app, served on its own address).
+    'admin_url' => env('ADMIN_URL', 'http://admin.localhost:3000'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
