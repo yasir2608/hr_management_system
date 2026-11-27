@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Access\Access;
+use App\Models\Employee;
 use App\Models\User;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
@@ -26,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Short, stable names for records that documents (and later approvals) attach to.
+        Relation::morphMap(['employee' => Employee::class]);
+
         // A session ends after a period without use, on top of the absolute expiry.
         Sanctum::authenticateAccessTokensUsing(fn (PersonalAccessToken $token, bool $isValid): bool => $isValid
             && ($token->last_used_at === null || $token->last_used_at->gt(now()->subMinutes((int) config('sanctum.idle_timeout')))));
