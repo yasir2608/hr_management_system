@@ -49,6 +49,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
@@ -274,6 +275,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         });
         Route::middleware('permission:contractors.invoices.approve')->group(function (): void {
             Route::post('/contractors/{contractor}/invoices/{invoice}/review', [InvoiceController::class, 'review'])->whereUlid(['contractor', 'invoice']);
+        });
+
+        // Payroll
+        Route::middleware('permission:payroll.view,payroll.settings.manage')->group(function (): void {
+            Route::get('/payroll/settings', [PayrollSettingsController::class, 'index']);
+        });
+        Route::middleware('permission:payroll.settings.manage')->group(function (): void {
+            Route::put('/payroll/settings/{country}', [PayrollSettingsController::class, 'update'])->where('country', '[A-Z]{2}');
         });
 
         // Activity history

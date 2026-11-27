@@ -15,6 +15,7 @@ use App\Models\Employee;
 use App\Models\LeavePolicy;
 use App\Models\LeaveType;
 use App\Models\Location;
+use App\Models\PayrollSetting;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
@@ -92,6 +93,16 @@ class DemoSeeder extends Seeder
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'GB'], ['is_primary' => true]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'US'], ['is_primary' => false]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'PK'], ['is_primary' => false]);
+
+        // UK and Pakistan payroll are set up; the US is left for the demo to show "Setup needed".
+        PayrollSetting::query()->firstOrCreate(['country_code' => 'GB'], [
+            'currency' => 'GBP', 'pay_frequency' => 'monthly', 'period_start_day' => 1, 'pay_date_rule' => 'fixed_day', 'pay_day' => 25, 'input_cutoff_days' => 5,
+            'employer_details' => ['paye_reference' => '123/NS45678', 'accounts_office_reference' => '123PN00045678', 'pension_provider' => 'NEST', 'employment_allowance' => 'yes'],
+        ]);
+        PayrollSetting::query()->firstOrCreate(['country_code' => 'PK'], [
+            'currency' => 'PKR', 'pay_frequency' => 'monthly', 'period_start_day' => 1, 'pay_date_rule' => 'last_working_day', 'input_cutoff_days' => 3,
+            'employer_details' => ['employer_ntn' => '1234567-8', 'eobi_employer_number' => 'EOBI-LHR-004512'],
+        ]);
         foreach (LeaveType::STARTERS as [$name, $code, $color, $paid, $balance, $approval, $reason, $attachment]) {
             LeaveType::query()->firstOrCreate(['code' => $code], ['name' => $name, 'color' => $color, 'is_paid' => $paid, 'uses_balance' => $balance, 'approval' => $approval, 'reason_required' => $reason, 'attachment_after_days' => $attachment]);
         }

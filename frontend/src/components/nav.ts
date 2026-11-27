@@ -33,6 +33,12 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Payroll",
+    items: [
+      { href: "/payroll/settings", label: "Payroll settings", icon: "⚙", permissions: ["payroll.view", "payroll.settings.manage"] },
+    ],
+  },
+  {
     label: "Contractors",
     items: [
       { href: "/contractors", label: "Contracts & invoices", icon: "◇", permissions: ["contractors.view", "contractors.manage"] },
