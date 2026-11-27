@@ -26,6 +26,8 @@ use App\Http\Controllers\Company\PreferencesController;
 use App\Http\Controllers\Company\RegionalSettingsController;
 use App\Http\Controllers\Company\SetupChecklistController;
 use App\Http\Controllers\Company\SignInSettingsController;
+use App\Http\Controllers\Contractors\ContractorController;
+use App\Http\Controllers\Contractors\ContractorFieldController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
@@ -225,6 +227,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/attendance/corrections', [CorrectionController::class, 'index'])->middleware('permission:attendance.view,attendance.corrections.approve');
         Route::get('/attendance/records/{record}/corrections', [CorrectionController::class, 'history'])->whereUlid('record');
         Route::get('/attendance/employees/{employee}', [AttendanceHistoryController::class, 'forEmployee'])->whereUlid('employee');
+
+        // Contractors
+        Route::middleware('permission:contractors.view,contractors.manage')->group(function (): void {
+            Route::get('/contractors', [ContractorController::class, 'index']);
+            Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])->whereUlid('contractor');
+        });
+        Route::middleware('permission:contractors.manage')->group(function (): void {
+            Route::post('/contractors', [ContractorController::class, 'store']);
+            Route::put('/contractors/{contractor}', [ContractorController::class, 'update'])->whereUlid('contractor');
+            Route::put('/contractor-fields', [ContractorFieldController::class, 'update']);
+        });
 
         // Activity history
         Route::get('/activity/integrity', ActivityIntegrityController::class)->middleware('permission:activity.view');

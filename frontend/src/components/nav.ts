@@ -33,6 +33,10 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Contractors",
+    items: [{ href: "/contractors", label: "Contracts & invoices", icon: "◇", permissions: ["contractors.view", "contractors.manage"] }],
+  },
+  {
     label: "Settings",
     items: [
       { href: "/settings/company", label: "Company setup", icon: "⚙", permissions: ["company.settings.view", "company.settings.manage"] },
