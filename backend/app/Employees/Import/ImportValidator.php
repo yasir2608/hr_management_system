@@ -67,7 +67,7 @@ class ImportValidator
                 $numbersInFile[$number] ??= $row['row'];
             }
 
-            $rows[$index] = ['row' => $row['row'], 'values' => $values, 'errors' => $errors];
+            $rows[$index] = ['row' => $row['row'], 'values' => $values, 'errors' => $errors, 'excluded' => $row['excluded'] ?? false];
         }
 
         // A manager can be someone earlier in the same file.
@@ -78,12 +78,14 @@ class ImportValidator
             }
         }
 
-        $errorCount = collect($rows)->filter(fn (array $row): bool => $row['errors'] !== [])->count();
+        // Rows left out by the reviewer are neither ready nor errors.
+        $included = collect($rows)->reject(fn (array $row): bool => $row['excluded']);
+        $errorCount = $included->filter(fn (array $row): bool => $row['errors'] !== [])->count();
 
         $import->forceFill([
             'rows' => $rows,
             'status' => EmployeeImport::STATUS_VALIDATED,
-            'ready_count' => count($rows) - $errorCount,
+            'ready_count' => $included->count() - $errorCount,
             'error_count' => $errorCount,
         ])->save();
 

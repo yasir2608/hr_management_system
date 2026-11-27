@@ -129,6 +129,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/{import}', [EmployeeImportController::class, 'show'])->whereUlid('import');
             Route::post('/{import}/cancel', [EmployeeImportController::class, 'cancel'])->whereUlid('import');
             Route::post('/{import}/validate', [EmployeeImportController::class, 'revalidate'])->whereUlid('import');
+            Route::patch('/{import}/rows/{row}', [EmployeeImportController::class, 'updateRow'])->whereUlid('import')->whereNumber('row');
+            Route::post('/{import}/rows/{row}/toggle', [EmployeeImportController::class, 'toggleRow'])->whereUlid('import')->whereNumber('row');
+            Route::get('/{import}/errors', [EmployeeImportController::class, 'errors'])->whereUlid('import');
         });
 
         // Users with access to the company

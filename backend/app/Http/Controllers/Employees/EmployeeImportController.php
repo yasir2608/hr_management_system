@@ -122,6 +122,72 @@ class EmployeeImportController extends Controller
         return response()->json($this->present($import));
     }
 
+    /**
+     * Inline fix: replaces values in one row, then checks the whole file again so
+     * duplicates and in-file managers stay correct.
+     */
+    public function updateRow(Request $request, EmployeeImport $import, int $row, ImportValidator $validator): JsonResponse
+    {
+        abort_unless($import->isOpen(), 422, 'This import is already finished.');
+        $canSensitive = $this->access->can('payroll.settings.manage');
+        $allowed = collect(ImportColumns::all())->reject(fn (array $column) => $column['sensitive'] && ! $canSensitive)->keys()->all();
+
+        $data = $request->validate(['values' => ['required', 'array'], 'values.*' => ['nullable', 'string', 'max:255']]);
+
+        $rows = collect($import->rows);
+        $index = $rows->search(fn (array $item): bool => $item['row'] === $row);
+        abort_if($index === false, 404);
+
+        $current = $rows[$index];
+        $current['values'] = [...$current['values'], ...collect($data['values'])->only($allowed)->all()];
+        $import->rows = $rows->put($index, $current)->values()->all();
+
+        return response()->json($this->present($validator->validate($import)));
+    }
+
+    /**
+     * Leaves a row out of the import (or brings it back).
+     */
+    public function toggleRow(EmployeeImport $import, int $row, ImportValidator $validator): JsonResponse
+    {
+        abort_unless($import->isOpen(), 422, 'This import is already finished.');
+
+        $rows = collect($import->rows);
+        $index = $rows->search(fn (array $item): bool => $item['row'] === $row);
+        abort_if($index === false, 404);
+
+        $current = $rows[$index];
+        $current['excluded'] = ! ($current['excluded'] ?? false);
+        $import->rows = $rows->put($index, $current)->values()->all();
+
+        return response()->json($this->present($validator->validate($import)));
+    }
+
+    /**
+     * The problems as a spreadsheet, to fix in the original file if preferred.
+     * Sensitive values are not repeated in the download.
+     */
+    public function errors(EmployeeImport $import): StreamedResponse
+    {
+        $columns = ImportColumns::all();
+
+        return response()->streamDownload(function () use ($import, $columns): void {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Row', 'Column', 'Value', 'Problem'], ',', '"', '');
+            foreach ($import->rows as $row) {
+                if ($row['excluded'] ?? false) {
+                    continue;
+                }
+                foreach ($row['errors'] as $key => $message) {
+                    $value = ($columns[$key]['sensitive'] ?? false) ? '(hidden)' : ($row['values'][$key] ?? '');
+                    fputcsv($out, [$row['row'], $columns[$key]['label'] ?? $key, $value, $message], ',', '"', '');
+                }
+            }
+            fclose($out);
+        }, 'import-problems.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     public function cancel(EmployeeImport $import): JsonResponse
     {
         abort_unless($import->isOpen(), 422, 'This import is already finished.');
