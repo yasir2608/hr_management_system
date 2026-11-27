@@ -84,9 +84,9 @@ export function EditDetailsModal({ employee, personal, onClose, onDone }: Props)
 }
 
 /** Effective-dated change: the previous value stays in history; past payroll is unaffected. */
-export function RecordChangeModal({ employee, canChangePay, onClose, onDone }: Props & { canChangePay: boolean }) {
+export function RecordChangeModal({ employee, canChangePay, onClose, onDone, initialType = "job" }: Props & { canChangePay: boolean; initialType?: string }) {
   const options = useFormOptions();
-  const [type, setType] = useState("job");
+  const [type, setType] = useState(initialType);
   const [form, setForm] = useState<Record<string, string>>({
     effective_from: new Date().toISOString().slice(0, 10), reason: "",
     job_title: employee.current_job_title ?? "", department_id: employee.department?.id ?? "", team_id: employee.team?.id ?? "",

@@ -20,6 +20,8 @@ return [
             'ntn' => ['label' => 'National tax number (NTN)', 'required' => false, 'regex' => '/^\d{7}-?\d?$/', 'hint' => '7 or 8 digits'],
             'eobi_number' => ['label' => 'EOBI registration number', 'required' => false, 'regex' => null, 'hint' => null],
             'province' => ['label' => 'Province (for social security)', 'required' => true, 'options' => ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad'], 'regex' => null, 'hint' => null],
+            'eobi_covered' => ['label' => 'Covered by EOBI', 'required' => false, 'options' => ['yes', 'no'], 'regex' => null, 'hint' => 'Blank means yes'],
+            'social_security_covered' => ['label' => 'Covered by provincial social security', 'required' => false, 'options' => ['auto', 'yes', 'no'], 'regex' => null, 'hint' => 'Auto decides from the wage limit'],
         ],
         'pay_frequencies' => ['monthly'],
         // Company (employer) identifiers needed for payroll in this country. Encrypted; shown with payroll.tax_ids.view.
@@ -37,6 +39,8 @@ return [
             'tax_code' => ['label' => 'Tax code', 'required' => true, 'regex' => '/^(K?\d{1,4}[LMNTX]?|BR|D0|D1|NT|0T)(\s?(W1|M1|X))?$/i', 'hint' => 'e.g. 1257L'],
             'student_loan_plan' => ['label' => 'Student loan plan', 'required' => false, 'options' => ['none', 'plan_1', 'plan_2', 'plan_4', 'plan_5', 'postgraduate'], 'regex' => null, 'hint' => null],
             'pension_opt_out' => ['label' => 'Opted out of workplace pension', 'required' => false, 'options' => ['no', 'yes'], 'regex' => null, 'hint' => null],
+            'ni_category' => ['label' => 'National Insurance category letter', 'required' => false, 'options' => ['A', 'B', 'C', 'H', 'J', 'M', 'Z'], 'regex' => null, 'hint' => 'Blank means A, the usual letter'],
+            'pension_employee_percent' => ['label' => 'Employee pension contribution %', 'required' => false, 'regex' => '/^\d{1,2}(\.\d{1,2})?$/', 'hint' => 'Blank means the 5% minimum'],
         ],
         'pay_frequencies' => ['monthly', 'four_weekly', 'weekly'],
         'employer_fields' => [
@@ -54,6 +58,9 @@ return [
             'filing_status' => ['label' => 'W-4 filing status', 'required' => true, 'options' => ['single', 'married_jointly', 'head_of_household'], 'regex' => null, 'hint' => null],
             'work_state' => ['label' => 'Work state', 'required' => true, 'options' => ['CA', 'NY', 'TX', 'FL', 'WA', 'IL', 'MA', 'Other'], 'regex' => null, 'hint' => 'Supported states for withholding'],
             'w4_extra_withholding' => ['label' => 'Extra withholding per pay period', 'required' => false, 'regex' => '/^\d+(\.\d{1,2})?$/', 'hint' => 'USD amount'],
+            'w4_dependents_amount' => ['label' => 'W-4 step 3: dependents amount (yearly)', 'required' => false, 'regex' => '/^\d+(\.\d{1,2})?$/', 'hint' => 'USD, blank means 0'],
+            'w4_other_income' => ['label' => 'W-4 step 4(a): other income (yearly)', 'required' => false, 'regex' => '/^\d+(\.\d{1,2})?$/', 'hint' => 'USD, blank means 0'],
+            'w4_deductions' => ['label' => 'W-4 step 4(b): deductions (yearly)', 'required' => false, 'regex' => '/^\d+(\.\d{1,2})?$/', 'hint' => 'USD, blank means 0'],
         ],
         'pay_frequencies' => ['biweekly', 'semi_monthly', 'monthly', 'weekly'],
         'employer_fields' => [

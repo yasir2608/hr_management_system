@@ -49,6 +49,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
@@ -283,6 +284,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/settings', [PayrollSettingsController::class, 'index']);
             Route::get('/payroll/groups', [PayrollGroupController::class, 'index']);
             Route::get('/payroll/groups/{group}', [PayrollGroupController::class, 'members'])->whereUlid('group');
+            Route::get('/payroll/employees', [PayrollEmployeeController::class, 'index']);
+            Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
         });
         Route::middleware('permission:payroll.settings.manage')->group(function (): void {
             Route::put('/payroll/settings/{country}', [PayrollSettingsController::class, 'update'])->where('country', '[A-Z]{2}');
