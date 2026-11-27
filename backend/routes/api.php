@@ -54,6 +54,7 @@ use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
 use App\Http\Controllers\Payroll\PayrollReadinessController;
+use App\Http\Controllers\Payroll\PayrollRunController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
@@ -289,6 +290,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/groups/{group}', [PayrollGroupController::class, 'members'])->whereUlid('group');
             Route::get('/payroll/employees', [PayrollEmployeeController::class, 'index']);
             Route::get('/payroll/readiness', PayrollReadinessController::class);
+            Route::get('/payroll/runs', [PayrollRunController::class, 'index']);
+            Route::get('/payroll/runs/periods', [PayrollRunController::class, 'periods']);
+            Route::get('/payroll/runs/{run}', [PayrollRunController::class, 'show'])->whereUlid('run');
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
             Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
             Route::post('/payroll/employees/{employee}/impact-preview', ImpactPreviewController::class)->whereUlid('employee');
@@ -306,6 +310,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::delete('/payroll/groups/{group}', [PayrollGroupController::class, 'destroy'])->whereUlid('group');
             Route::post('/payroll/groups/{group}/members', [PayrollGroupController::class, 'assign'])->whereUlid('group');
             Route::delete('/payroll/groups/{group}/members/{employee}', [PayrollGroupController::class, 'unassign'])->whereUlid(['group', 'employee']);
+        });
+        Route::middleware('permission:payroll.run')->group(function (): void {
+            Route::post('/payroll/runs', [PayrollRunController::class, 'store']);
+            Route::post('/payroll/runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->whereUlid('run');
         });
 
         // Activity history
