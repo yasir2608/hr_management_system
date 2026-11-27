@@ -34,7 +34,10 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Contractors",
-    items: [{ href: "/contractors", label: "Contracts & invoices", icon: "◇", permissions: ["contractors.view", "contractors.manage"] }],
+    items: [
+      { href: "/contractors", label: "Contracts & invoices", icon: "◇", permissions: ["contractors.view", "contractors.manage"] },
+      { href: "/contractors/invoices", label: "Invoice list", icon: "▤", permissions: ["contractors.view", "contractors.manage"] },
+    ],
   },
   {
     label: "Settings",

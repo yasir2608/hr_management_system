@@ -235,6 +235,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/contractors', [ContractorController::class, 'index']);
             Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])->whereUlid('contractor');
             Route::get('/contractor-contracts/upcoming', [ContractController::class, 'upcoming']);
+            Route::get('/contractor-invoices', [InvoiceController::class, 'all']);
             Route::get('/contractors/{contractor}/contracts', [ContractController::class, 'index'])->whereUlid('contractor');
             Route::get('/contractors/{contractor}/contracts/{contract}/signed', [ContractController::class, 'download'])->whereUlid(['contractor', 'contract']);
             Route::get('/contractors/{contractor}/invoices', [InvoiceController::class, 'index'])->whereUlid('contractor');
@@ -248,6 +249,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/contractors/{contractor}/contracts/{contract}', [ContractController::class, 'update'])->whereUlid(['contractor', 'contract']);
             Route::post('/contractors/{contractor}/invoices', [InvoiceController::class, 'store'])->whereUlid('contractor');
             Route::post('/contractors/{contractor}/invoices/{invoice}', [InvoiceController::class, 'update'])->whereUlid(['contractor', 'invoice']);
+            Route::post('/contractors/{contractor}/invoices/{invoice}/status', [InvoiceController::class, 'move'])->whereUlid(['contractor', 'invoice']);
         });
 
         // Activity history
