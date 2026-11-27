@@ -14,6 +14,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "⌂" },
       { href: "/me", label: "My profile", icon: "☺", permissions: ["self.profile.view"] },
+      { href: "/me/onboarding", label: "My onboarding", icon: "✓", permissions: ["self.profile.view"] },
     ],
   },
   {

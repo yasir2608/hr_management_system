@@ -4,13 +4,15 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Hidden(['submission'])]
 #[Fillable([
     'employee_id', 'template_id', 'title', 'description', 'owner_type', 'owner_user_id', 'due_date', 'is_required',
-    'employee_field_group', 'status', 'blocked_reason', 'review_note', 'completed_at', 'completed_by', 'position',
+    'employee_field_group', 'submission', 'submitted_at', 'status', 'blocked_reason', 'review_note', 'completed_at', 'completed_by', 'position',
 ])]
 class OnboardingTask extends Model
 {
@@ -30,7 +32,7 @@ class OnboardingTask extends Model
      */
     protected function casts(): array
     {
-        return ['due_date' => 'date:Y-m-d', 'is_required' => 'boolean', 'completed_at' => 'datetime', 'position' => 'integer'];
+        return ['due_date' => 'date:Y-m-d', 'is_required' => 'boolean', 'completed_at' => 'datetime', 'position' => 'integer', 'submission' => 'encrypted:array', 'submitted_at' => 'datetime'];
     }
 
     /**

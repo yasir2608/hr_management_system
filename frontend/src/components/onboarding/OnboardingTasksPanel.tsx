@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Banner, EmptyState, formatDate, humanize, Panel, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { ReviewSubmissionModal } from "./ReviewSubmissionModal";
 
 export type OnboardingTaskRow = {
   id: string;
@@ -29,6 +30,7 @@ const statusBadge: Record<string, React.ReactNode> = {
 export function OnboardingTasksPanel({ employeeId, children }: { employeeId: string; children?: (tasks: OnboardingTaskRow[], reload: () => void) => React.ReactNode }) {
   const [tasks, setTasks] = useState<OnboardingTaskRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<OnboardingTaskRow | null>(null);
 
   const load = useCallback(async () => {
     setTasks((await api<{ data: OnboardingTaskRow[] }>(`/onboarding/employees/${employeeId}/tasks`)).data);
@@ -80,6 +82,7 @@ export function OnboardingTasksPanel({ employeeId, children }: { employeeId: str
     <div className="stack">
       {error && <Banner tone="error">{error}</Banner>}
       {children?.(tasks, () => void load())}
+      {reviewing && <ReviewSubmissionModal taskId={reviewing.id} title={reviewing.title} onClose={() => setReviewing(null)} onDone={() => { setReviewing(null); void load(); }} />}
       <Panel title="Onboarding checklist" subtitle={`${done} of ${tasks.length} tasks done`} bodyless>
         <div className="progress" style={{ margin: "0 19px 12px" }}><span style={{ width: `${(done / tasks.length) * 100}%` }} /></div>
         <Table headers={["Task", "Who", "Due", "Status", ""]}>
@@ -94,6 +97,7 @@ export function OnboardingTasksPanel({ employeeId, children }: { employeeId: str
               <td>{statusBadge[task.status]}</td>
               <td>
                 <div className="row" style={{ justifyContent: "flex-end" }}>
+                  {task.status === "submitted" && <button className="btn primary" onClick={() => setReviewing(task)}>Review</button>}
                   {task.status !== "done" && task.status !== "submitted" && <button className="btn" onClick={() => void update(task, "done")}>Mark done</button>}
                   {task.status === "todo" && <button className="btn" onClick={() => void update(task, "blocked")}>Blocked</button>}
                   {(task.status === "done" || task.status === "blocked") && <button className="btn" onClick={() => void update(task, "todo")}>Reopen</button>}

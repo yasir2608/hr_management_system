@@ -25,6 +25,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
 use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
@@ -151,6 +152,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/onboarding/employees/{employee}/tasks', [OnboardingTaskController::class, 'forEmployee'])->whereUlid('employee');
         Route::get('/onboarding/my-tasks', [OnboardingTaskController::class, 'mine']);
         Route::patch('/onboarding/tasks/{task}', [OnboardingTaskController::class, 'update']);
+        Route::get('/onboarding/tasks/{task}/submission', [EmployeeOnboardingController::class, 'submission']);
+        Route::post('/onboarding/tasks/{task}/review', [EmployeeOnboardingController::class, 'review']);
+        Route::get('/me/onboarding', [EmployeeOnboardingController::class, 'mine']);
+        Route::post('/me/onboarding/tasks/{task}', [EmployeeOnboardingController::class, 'submit'])->middleware('throttle:20,1');
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');
