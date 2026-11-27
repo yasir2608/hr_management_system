@@ -8,6 +8,7 @@ use App\Models\CompanySetting;
 use App\Models\Employee;
 use App\Support\Activity;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -37,13 +38,23 @@ class Clock
     {
         $this->ensureEnabled();
 
-        $record = AttendanceRecord::query()->create([
-            'employee_id' => $employee->id,
-            'clock_in_at' => now(),
-            'source' => 'web',
-            'note' => $note,
-            'clock_in_ip' => $request->ip(),
-        ]);
+        // Locking the employee row serialises double clicks and two open tabs.
+        $record = DB::transaction(function () use ($employee, $request, $note): AttendanceRecord {
+            Employee::query()->whereKey($employee->id)->lockForUpdate()->first();
+            $open = $this->openShift($employee);
+
+            if ($open !== null) {
+                throw new AlreadyClockedIn($open, $this->timezone($employee));
+            }
+
+            return AttendanceRecord::query()->create([
+                'employee_id' => $employee->id,
+                'clock_in_at' => now(),
+                'source' => 'web',
+                'note' => $note,
+                'clock_in_ip' => $request->ip(),
+            ]);
+        });
 
         Activity::record('attendance.clocked_in', "{$employee->fullName()} clocked in", $record);
 

@@ -17,7 +17,7 @@ function ClockPage() {
   const [problem, setProblem] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
   const [note, setNote] = useState("");
-  const [confirmation, setConfirmation] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [confirmation, setConfirmation] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -39,7 +39,9 @@ function ClockPage() {
       setConfirmation({ tone: "success", text: result.message });
       setNote("");
     } catch (caught) {
-      setConfirmation({ tone: "error", text: caught instanceof ApiError ? caught.message : "That did not work." });
+      // A second clock-in is not an error to fear: show where the person stands.
+      const alreadyIn = caught instanceof ApiError && caught.code === "ALREADY_CLOCKED_IN";
+      setConfirmation({ tone: alreadyIn ? "info" : "error", text: caught instanceof ApiError ? caught.message : "That did not work." });
       load();
     } finally {
       setBusy(false);
