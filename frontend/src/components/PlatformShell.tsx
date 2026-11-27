@@ -11,6 +11,7 @@ export const platformNav = [
   { href: "/platform/companies", label: "Customer companies", icon: "▣" },
   { href: "/platform/users", label: "Customer users", icon: "◎" },
   { href: "/platform/support", label: "Support access", icon: "⚑" },
+  { href: "/platform/activity", label: "Platform activity", icon: "≡" },
 ];
 
 /** Layout for M.Y HRMS operations staff. Not tied to any one company. */

@@ -49,6 +49,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
 use App\Http\Controllers\Platform\OverviewController as PlatformOverviewController;
@@ -91,6 +92,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/companies/{company}', [PlatformCompanyController::class, 'show'])->whereUlid('company');
         Route::get('/users', [PlatformUserController::class, 'index']);
         Route::get('/users/{user}', [PlatformUserController::class, 'show'])->whereUlid('user');
+        Route::get('/activity', [PlatformActivityController::class, 'index']);
+        Route::get('/activity/export', [PlatformActivityController::class, 'export']);
         Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
         Route::get('/support-access', [SupportAccessController::class, 'index']);
         Route::post('/support-access', [SupportAccessController::class, 'store'])->middleware('throttle:20,1');
