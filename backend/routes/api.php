@@ -27,6 +27,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
@@ -167,6 +168,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/approvals/{approval}/decide', [ApprovalController::class, 'decide'])->whereUlid('approval');
         Route::post('/approvals/{approval}/info', [ApprovalController::class, 'provideInfo'])->whereUlid('approval');
         Route::post('/approvals/{approval}/reassign', [ApprovalController::class, 'reassign'])->whereUlid('approval');
+
+        // Leave
+        Route::get('/leave/types', [LeaveTypeController::class, 'index']);
+        Route::middleware('permission:leave.policies.manage')->prefix('leave')->group(function (): void {
+            Route::post('/types', [LeaveTypeController::class, 'store']);
+            Route::put('/types/{leaveType}', [LeaveTypeController::class, 'update']);
+            Route::post('/types/starters', [LeaveTypeController::class, 'addStarters']);
+        });
 
         // Activity history
         Route::get('/activity/integrity', ActivityIntegrityController::class)->middleware('permission:activity.view');

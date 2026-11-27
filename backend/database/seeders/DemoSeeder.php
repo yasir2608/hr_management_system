@@ -11,6 +11,7 @@ use App\Models\CompanySetting;
 use App\Models\CompanyUser;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\LeaveType;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\Team;
@@ -87,6 +88,9 @@ class DemoSeeder extends Seeder
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'GB'], ['is_primary' => true]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'US'], ['is_primary' => false]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'PK'], ['is_primary' => false]);
+        foreach (LeaveType::STARTERS as [$name, $code, $color, $paid, $balance, $approval, $reason, $attachment]) {
+            LeaveType::query()->firstOrCreate(['code' => $code], ['name' => $name, 'color' => $color, 'is_paid' => $paid, 'uses_balance' => $balance, 'approval' => $approval, 'reason_required' => $reason, 'attachment_after_days' => $attachment]);
+        }
 
         $london = Location::query()->firstOrCreate(['code' => 'LDN'], ['name' => 'London office', 'country_code' => 'GB', 'city' => 'London', 'timezone' => 'Europe/London']);
         $newYork = Location::query()->firstOrCreate(['code' => 'NYC'], ['name' => 'New York office', 'country_code' => 'US', 'city' => 'New York', 'timezone' => 'America/New_York']);

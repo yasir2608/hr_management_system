@@ -25,6 +25,10 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Time off",
+    items: [{ href: "/leave", label: "Leave", icon: "☀", permissions: ["leave.policies.manage", "leave.requests.view", "leave.approve", "self.leave.request"] }],
+  },
+  {
     label: "Settings",
     items: [
       { href: "/settings/company", label: "Company setup", icon: "⚙", permissions: ["company.settings.view", "company.settings.manage"] },
