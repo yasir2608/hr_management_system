@@ -59,6 +59,8 @@ trait CreatesTenancyTables
             $table->json('properties')->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
+            $table->char('previous_hash', 64)->nullable();
+            $table->char('hash', 64)->nullable();
             $table->timestamp('created_at', 6)->useCurrent();
         });
 
