@@ -25,6 +25,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
 use App\Http\Controllers\Onboarding\OnboardingTemplateController;
@@ -148,6 +149,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::delete('/templates/{template}', [OnboardingTemplateController::class, 'destroy']);
             Route::get('/employees', [OnboardingTaskController::class, 'overview']);
             Route::post('/employees/{employee}/start', [OnboardingTaskController::class, 'start'])->whereUlid('employee');
+            Route::get('/employees/{employee}/activation', [ActivationController::class, 'show'])->whereUlid('employee');
+            Route::post('/employees/{employee}/activate', [ActivationController::class, 'activate'])->whereUlid('employee')->middleware('permission:employees.manage');
         });
         Route::get('/onboarding/employees/{employee}/tasks', [OnboardingTaskController::class, 'forEmployee'])->whereUlid('employee');
         Route::get('/onboarding/my-tasks', [OnboardingTaskController::class, 'mine']);

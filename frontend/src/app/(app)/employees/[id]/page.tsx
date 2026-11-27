@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DocumentsPanel } from "@/components/employees/DocumentsPanel";
+import { ActivationPanel } from "@/components/onboarding/ActivationPanel";
 import { OnboardingTasksPanel } from "@/components/onboarding/OnboardingTasksPanel";
 import { UpdateRequestsPanel } from "@/components/employees/UpdateRequestsPanel";
 import { ChangeStatusModal, EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
@@ -191,7 +192,11 @@ export default function EmployeeDetailPage() {
       )}
 
       {tab === "documents" && <DocumentsPanel employeeId={summary.id} />}
-      {tab === "onboarding" && <OnboardingTasksPanel employeeId={summary.id} />}
+      {tab === "onboarding" && (
+        <OnboardingTasksPanel employeeId={summary.id}>
+          {(tasks) => <ActivationPanel employeeId={summary.id} refreshKey={tasks.filter((task) => task.status === "done").length} onActivated={load} />}
+        </OnboardingTasksPanel>
+      )}
 
       {tab === "payroll" && (
         <div className="grid split">
