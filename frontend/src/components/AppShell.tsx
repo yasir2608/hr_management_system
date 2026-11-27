@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { inItem, navGroups, type NavItem } from "./nav";
+import { NotificationBell } from "./NotificationBell";
 import { SearchBox } from "./SearchBox";
 import { humanize, initials } from "./ui";
 
@@ -114,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="topright" style={{ position: "relative" }}>
             <SearchBox />
             <span className="env">Demo environment</span>
+            <NotificationBell />
             <button className="userbtn" onClick={() => setMenuOpen((open) => !open)} aria-haspopup="menu" aria-expanded={menuOpen}>
               <span className="avatar small">{initials(user.name)}</span>
               <span className="topname">{user.name}</span>

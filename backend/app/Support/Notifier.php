@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Support;
+
+use App\Models\CompanyUser;
+use App\Models\UserNotification;
+use App\Tenancy\CurrentCompany;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Sends in-product notifications to people in the current company. Callers pass plain wording only: titles and
+ * bodies must never contain salary, bank, tax or identity details (they may appear in previews and emails).
+ * - the person who caused the event is not notified about it
+ * - a notification that asks for an action is resolved for everyone once the action is done
+ */
+class Notifier
+{
+    /**
+     * @param  iterable<string|null>  $userIds
+     * @param  array{body?: ?string, link?: ?string, permission?: ?string, subject?: ?Model, action_required?: bool, include_actor?: bool}  $options
+     * @return int how many people were notified
+     */
+    public static function send(iterable $userIds, string $kind, string $title, array $options = []): int
+    {
+        $companyId = app(CurrentCompany::class)->id();
+        if ($companyId === null) {
+            return 0;
+        }
+
+        $actor = request()->user()?->getAuthIdentifier();
+        $active = CompanyUser::query()->where('company_id', $companyId)->where('status', CompanyUser::STATUS_ACTIVE)
+            ->whereIn('user_id', collect($userIds)->filter()->unique()->values())->pluck('user_id');
+        $subject = $options['subject'] ?? null;
+        $sent = 0;
+
+        foreach ($active as $userId) {
+            if ($userId === $actor && ! ($options['include_actor'] ?? false)) {
+                continue;
+            }
+            UserNotification::query()->create([
+                'user_id' => $userId,
+                'kind' => $kind,
+                'title' => mb_substr($title, 0, 200),
+                'body' => isset($options['body']) ? mb_substr((string) $options['body'], 0, 500) : null,
+                'link' => $options['link'] ?? null,
+                'permission' => $options['permission'] ?? null,
+                'subject_type' => $subject ? Activity::subjectType($subject) : null,
+                'subject_id' => $subject?->getKey(),
+                'action_required' => $options['action_required'] ?? false,
+            ]);
+            $sent++;
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Notifies everyone in the company whose roles grant the permission. The permission is stored, so people who
+     * lose it no longer see the notification.
+     *
+     * @param  array{body?: ?string, link?: ?string, subject?: ?Model, action_required?: bool}  $options
+     */
+    public static function sendToPermission(string $permission, string $kind, string $title, array $options = []): int
+    {
+        return self::send(self::holders($permission), $kind, $title, [...$options, 'permission' => $permission]);
+    }
+
+    /**
+     * Notifies everyone in the company holding a role.
+     *
+     * @param  array{body?: ?string, link?: ?string, permission?: ?string, subject?: ?Model, action_required?: bool}  $options
+     */
+    public static function sendToRole(string $roleKey, string $kind, string $title, array $options = []): int
+    {
+        $companyId = app(CurrentCompany::class)->id();
+        $users = DB::table('company_users')
+            ->join('role_assignments', 'role_assignments.company_user_id', '=', 'company_users.id')
+            ->join('roles', 'roles.id', '=', 'role_assignments.role_id')
+            ->where('company_users.company_id', $companyId)->whereNull('role_assignments.revoked_at')->where('roles.key', $roleKey)
+            ->distinct()->pluck('company_users.user_id');
+
+        return self::send($users, $kind, $title, $options);
+    }
+
+    /**
+     * Active members whose roles grant the permission.
+     *
+     * @return list<string>
+     */
+    public static function holders(string $permission): array
+    {
+        $companyId = app(CurrentCompany::class)->id();
+
+        return DB::table('company_users')
+            ->join('role_assignments', 'role_assignments.company_user_id', '=', 'company_users.id')
+            ->join('permission_role', 'permission_role.role_id', '=', 'role_assignments.role_id')
+            ->join('permissions', 'permissions.id', '=', 'permission_role.permission_id')
+            ->where('company_users.company_id', $companyId)->where('company_users.status', CompanyUser::STATUS_ACTIVE)
+            ->whereNull('role_assignments.revoked_at')->where('permissions.key', $permission)
+            ->distinct()->pluck('company_users.user_id')->all();
+    }
+
+    /**
+     * Marks the open action notifications about a record as resolved, so nobody is asked to do what is already done.
+     *
+     * @param  list<string>|null  $kinds  only these kinds; NULL for all
+     */
+    public static function resolve(Model $subject, ?array $kinds = null): void
+    {
+        UserNotification::query()
+            ->where('subject_type', Activity::subjectType($subject))->where('subject_id', $subject->getKey())
+            ->where('action_required', true)->whereNull('resolved_at')
+            ->when($kinds !== null, fn ($query) => $query->whereIn('kind', $kinds))
+            ->update(['resolved_at' => now()]);
+    }
+}

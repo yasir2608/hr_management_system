@@ -9,6 +9,7 @@ use App\Models\ApprovalStep;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\Activity;
+use App\Support\Notifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,8 @@ class ApprovalEngine
             }
 
             $this->event($request, null, $requester, 'submitted');
+            $request->load('steps');
+            $this->notifyApprover($request, $request->currentStep());
 
             return $request->load('steps');
         });
@@ -116,6 +119,10 @@ class ApprovalEngine
 
             if ($decision === self::DECISION_REQUEST_INFO) {
                 $request->forceFill(['status' => ApprovalRequest::STATUS_INFO_REQUESTED])->save();
+                Notifier::resolve($request);
+                Notifier::send([$request->requested_by], 'approval.info_requested', "More information needed: {$request->title}", [
+                    'body' => $comment, 'link' => self::requesterLink($request), 'subject' => $request, 'action_required' => true,
+                ]);
                 $this->notifyStatus($request);
 
                 return;
@@ -137,6 +144,8 @@ class ApprovalEngine
 
             $next->forceFill(['status' => ApprovalStep::STATUS_PENDING])->save();
             $request->forceFill(['current_step' => $next->step_order])->save();
+            Notifier::resolve($request);
+            $this->notifyApprover($request, $next);
         });
 
         return $request->fresh(['steps', 'events']);
@@ -155,6 +164,8 @@ class ApprovalEngine
         $step?->forceFill(['status' => ApprovalStep::STATUS_PENDING, 'decided_by' => null, 'decided_at' => null])->save();
         $request->forceFill(['status' => ApprovalRequest::STATUS_PENDING])->save();
         $this->event($request, $step, $user, 'info_provided', $comment);
+        Notifier::resolve($request);
+        $this->notifyApprover($request, $step);
         $this->notifyStatus($request);
 
         return $request->fresh(['steps', 'events']);
@@ -182,6 +193,8 @@ class ApprovalEngine
         $from = $step->approver_user_id ?? "role:{$step->approver_role}";
         $step->forceFill(['approver_user_id' => $to->id, 'approver_role' => null])->save();
         $this->event($request, $step, $by, 'reassigned', $comment, ['from' => $from, 'to' => $to->id]);
+        Notifier::resolve($request);
+        $this->notifyApprover($request, $step->fresh());
 
         return $request->fresh(['steps', 'events']);
     }
@@ -249,6 +262,37 @@ class ApprovalEngine
         return ['user' => $spec, 'role' => null];
     }
 
+    /**
+     * Tells the approver of a step (a person, or everyone holding the step's role) that a request waits for them.
+     */
+    private function notifyApprover(ApprovalRequest $request, ?ApprovalStep $step): void
+    {
+        if ($step === null) {
+            return;
+        }
+
+        $options = ['link' => '/approvals', 'subject' => $request, 'action_required' => true];
+        $title = "Approval needed: {$request->title}";
+
+        if ($step->approver_user_id !== null) {
+            Notifier::send([$step->approver_user_id], 'approval.waiting', $title, $options);
+        } elseif ($step->approver_role !== null) {
+            Notifier::sendToRole($step->approver_role, 'approval.waiting', $title, $options);
+        }
+    }
+
+    /**
+     * Where the requester follows their request.
+     */
+    private static function requesterLink(ApprovalRequest $request): string
+    {
+        return match ($request->type) {
+            'leave_request' => '/leave',
+            'attendance_correction' => '/attendance',
+            default => '/approvals',
+        };
+    }
+
     private function notifyStatus(ApprovalRequest $request): void
     {
         $subject = $request->subject;
@@ -261,6 +305,13 @@ class ApprovalEngine
     private function finish(ApprovalRequest $request, string $status): void
     {
         $request->forceFill(['status' => $status, 'decided_at' => now()])->save();
+        Notifier::resolve($request);
+        if (in_array($status, [ApprovalRequest::STATUS_APPROVED, ApprovalRequest::STATUS_DECLINED], true)) {
+            $reason = $status === ApprovalRequest::STATUS_DECLINED ? $request->steps()->where('status', ApprovalStep::STATUS_DECLINED)->value('comment') : null;
+            Notifier::send([$request->requested_by], "approval.{$status}", ($status === ApprovalRequest::STATUS_APPROVED ? 'Approved: ' : 'Declined: ').$request->title, [
+                'body' => $reason ? "Reason: {$reason}" : null, 'link' => self::requesterLink($request), 'subject' => $request,
+            ]);
+        }
 
         $subject = $request->subject;
         if ($subject instanceof Approvable) {

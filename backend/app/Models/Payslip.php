@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\EventNotifications;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -22,6 +23,11 @@ class Payslip extends Model
 
     /** Replaced by a payslip from an approved replacement run. Kept for the record. */
     public const SUPERSEDED = 'superseded';
+
+    protected static function booted(): void
+    {
+        static::created(fn (Payslip $payslip) => EventNotifications::payslipCreated($payslip));
+    }
 
     /**
      * @return array<string, string>

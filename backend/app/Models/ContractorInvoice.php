@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\EventNotifications;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,11 @@ class ContractorInvoice extends Model
 
     /** Unpaid statuses that can fall overdue. */
     public const OUTSTANDING = ['received', 'pending_review', 'approved'];
+
+    protected static function booted(): void
+    {
+        static::saved(fn (ContractorInvoice $invoice) => EventNotifications::invoiceSaved($invoice));
+    }
 
     public function isOverdue(): bool
     {

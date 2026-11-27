@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\EventNotifications;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +39,11 @@ class PayrollRun extends Model
 
     /** Statuses that still allow inputs to be gathered again or the run to be cancelled. */
     public const OPEN = [self::DRAFT, self::CALCULATED, self::IN_REVIEW];
+
+    protected static function booted(): void
+    {
+        static::saved(fn (PayrollRun $run) => EventNotifications::payrollRunSaved($run));
+    }
 
     /**
      * @return array<string, string>

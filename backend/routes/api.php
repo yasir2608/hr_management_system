@@ -46,6 +46,7 @@ use App\Http\Controllers\Leave\LeavePolicyController;
 use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Leave\UnpaidLeaveController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
@@ -126,6 +127,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
         Route::get('/search', SearchController::class)->middleware('throttle:60,1');
         Route::get('/dashboard/hr', [DashboardController::class, 'hr'])->middleware('permission:employees.view,employees.manage');
+        // In-product notifications (each person's own)
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/count', [NotificationController::class, 'count']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->whereUlid('notification');
+
         Route::get('/dashboard/payroll', [DashboardController::class, 'payroll'])->middleware('permission:payroll.view,payroll.run,payroll.settings.manage');
         Route::get('/dashboard/manager', [DashboardController::class, 'manager'])->middleware('permission:employees.view,leave.approve,attendance.view');
         Route::get('/dashboard/me', [DashboardController::class, 'employee'])->middleware('permission:self.profile.view');

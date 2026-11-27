@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\OnboardingTask;
 use App\Models\OnboardingTemplate;
 use App\Support\Activity;
+use App\Support\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -54,6 +55,19 @@ class StartOnboarding
         });
 
         Activity::record('onboarding.started', "Onboarding started for {$employee->fullName()} with “{$template->name}”", $employee, ['template_id' => $template->id]);
+
+        // Each person with tasks hears about them: the new starter, and their manager.
+        $owners = $template->tasks->countBy('owner_type');
+        if (($owners['employee'] ?? 0) > 0) {
+            Notifier::send([$employee->user_id], 'onboarding.tasks', 'Your onboarding tasks are ready', [
+                'body' => "{$owners['employee']} task(s) to complete before or after your start date.", 'link' => '/me/onboarding', 'subject' => $employee, 'action_required' => true,
+            ]);
+        }
+        if (($owners['manager'] ?? 0) > 0) {
+            Notifier::send([$managerUserId], 'onboarding.manager_tasks', "Onboarding tasks for {$employee->fullName()}", [
+                'body' => "{$owners['manager']} task(s) assigned to you as their manager.", 'link' => "/employees/{$employee->id}", 'subject' => $employee, 'action_required' => true,
+            ]);
+        }
 
         return $template->tasks->count();
     }
