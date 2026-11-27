@@ -1,6 +1,8 @@
 <?php
 
 use App\Payroll\Rules\Pakistan2025;
+use App\Payroll\Rules\UnitedKingdom2025;
+use App\Payroll\Rules\UnitedKingdom2026;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +23,11 @@ return [
         // Tax year July to June. Open-ended until the next year's figures are added; later periods get a warning.
         'PK' => [
             ['class' => Pakistan2025::class, 'from' => '2025-07-01', 'to' => null],
+        ],
+        // Tax year 6 April to 5 April.
+        'GB' => [
+            ['class' => UnitedKingdom2025::class, 'from' => '2025-04-06', 'to' => '2026-04-05'],
+            ['class' => UnitedKingdom2026::class, 'from' => '2026-04-06', 'to' => null],
         ],
     ],
 ];
