@@ -49,6 +49,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Payroll\ImpactPreviewController;
 use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
@@ -288,6 +289,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/employees', [PayrollEmployeeController::class, 'index']);
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
             Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
+            Route::post('/payroll/employees/{employee}/impact-preview', ImpactPreviewController::class)->whereUlid('employee');
             // Changes are checked in the controller (payroll settings and salary access).
             Route::post('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'store'])->whereUlid('employee');
             Route::put('/payroll/employees/{employee}/pay-items/{item}', [PayItemController::class, 'update'])->whereUlid(['employee', 'item']);

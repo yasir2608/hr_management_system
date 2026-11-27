@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ImpactPreview } from "@/components/payroll/ImpactPreview";
 import { Banner, Field, Modal } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { EMPLOYMENT_TYPES, WORK_ARRANGEMENTS, type CountryField, type Employee } from "@/lib/employees";
@@ -165,6 +166,13 @@ export function RecordChangeModal({ employee, canChangePay, onClose, onDone, ini
           <input className="input" value={form.reason} onChange={set("reason")} />
         </Field>
       </div>
+      {type === "compensation" && (
+        <ImpactPreview
+          employeeId={employee.id}
+          ready={Number(form.amount) > 0 && !!form.effective_from}
+          body={{ kind: "pay", effective_from: form.effective_from, pay_basis: form.pay_basis, amount: form.amount, frequency: form.frequency }}
+        />
+      )}
     </Modal>
   );
 }

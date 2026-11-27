@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Banner, Field, Modal, Panel, Table, formatDate, money } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { ImpactPreview } from "./ImpactPreview";
 
 type PayItem = {
   id: string; kind: "allowance" | "deduction"; name: string; calculation: "fixed" | "percent"; amount: string | null; percent: string | null;
@@ -69,6 +70,13 @@ function ItemModal({ employeeId, action, currency, onClose, onSaved }: { employe
             ? <Field label={`New amount per pay period (${currency})`} required error={fieldError("amount")}><input className="input" type="number" min={0} step="0.01" value={form.amount} onChange={(event) => set({ amount: event.target.value })} /></Field>
             : <Field label="New % of base pay" required error={fieldError("percent")}><input className="input" type="number" min={0} max={100} step="0.001" value={form.percent} onChange={(event) => set({ percent: event.target.value })} /></Field>}
           <Field label="Reason" optional full><input className="input" value={form.notes} onChange={(event) => set({ notes: event.target.value })} placeholder="e.g. Annual review" /></Field>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <ImpactPreview
+              employeeId={employeeId}
+              ready={!!form.effective_from && Number(item!.calculation === "fixed" ? form.amount : form.percent) > 0}
+              body={{ kind: "pay_item", item_id: item!.id, effective_from: form.effective_from, amount: item!.calculation === "fixed" ? form.amount : null, percent: item!.calculation === "percent" ? form.percent : null }}
+            />
+          </div>
         </div>
       )}
       {action.type === "end" && (
