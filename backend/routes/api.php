@@ -319,6 +319,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/payroll/runs', [PayrollRunController::class, 'store']);
             Route::post('/payroll/runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/calculate', [PayrollRunController::class, 'calculate'])->whereUlid('run');
+            Route::post('/payroll/runs/{run}/submit-review', [PayrollRunController::class, 'submitForReview'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/issues/review', [RunIssueController::class, 'review'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/issues/unreview', [RunIssueController::class, 'unreview'])->whereUlid('run');
         });

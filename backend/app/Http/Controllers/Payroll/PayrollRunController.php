@@ -11,7 +11,10 @@ use App\Models\PayrollRunEmployee;
 use App\Payroll\CalculateRun;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
+use App\Payroll\RunIssues;
+use App\Payroll\RunSummary;
 use App\Support\Activity;
+use App\Tenancy\CurrentCompany;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +26,7 @@ use Throwable;
  */
 class PayrollRunController extends Controller
 {
-    public function __construct(private readonly SensitiveData $sensitive) {}
+    public function __construct(private readonly SensitiveData $sensitive, private readonly RunSummary $runSummary) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -88,22 +91,42 @@ class PayrollRunController extends Controller
     {
         $run->load(['group:id,name', 'creator:id,name']);
         $canSeePay = $this->sensitive->canSee(SensitiveData::SALARY);
+        $lines = $run->lines()->orderByDesc('included')->orderBy('employee_name')->get();
 
         return response()->json([
             ...$this->summary($run->loadCount(['lines as employee_count', 'lines as excluded_count' => fn ($query) => $query->where('included', false)])),
+            'company_name' => app(CurrentCompany::class)->get()?->name,
             'country_name' => config("countries.{$run->country_code}.name"),
             'created_by' => $run->creator?->name,
             'inputs_gathered_at' => $run->inputs_gathered_at?->toIso8601String(),
             'amounts_restricted' => ! $canSeePay,
             'totals' => $run->totals === null || $canSeePay ? $run->totals : collect($run->totals)->only(['employees', 'with_warnings', 'blocked', 'rules_versions', 'calculated_at'])->all(),
-            'lines' => $run->lines()->orderByDesc('included')->orderBy('employee_name')->get()
-                ->map(fn (PayrollRunEmployee $line): array => $this->line($line, $canSeePay)),
+            'item_totals' => $canSeePay ? $this->runSummary->byItem($lines) : null,
+            'lines' => $lines->map(fn (PayrollRunEmployee $line): array => $this->line($line, $canSeePay)),
         ]);
     }
 
     public function calculate(PayrollRun $run, CalculateRun $calculate): JsonResponse
     {
         $calculate->handle($run);
+
+        return $this->show($run->fresh());
+    }
+
+    /**
+     * A calculated run with nothing blocking goes to review. Warnings can still be reviewed there; calculating again
+     * takes the run back to "calculated".
+     */
+    public function submitForReview(PayrollRun $run, RunIssues $issues): JsonResponse
+    {
+        abort_unless($run->status === PayrollRun::CALCULATED, 422, 'Only a calculated run can be sent for review.');
+        $summary = $issues->summary($run, $run->lines()->get(), $issues->previousGross($run));
+        abort_if($summary['blocking'] > 0, 422, "Fix the {$summary['blocking']} blocking issue(s) and calculate again before sending this run for review.");
+
+        $run->forceFill(['status' => PayrollRun::IN_REVIEW])->save();
+        Activity::record('payroll.run_sent_for_review', "Payroll run for {$run->period_start->toDateString()} to {$run->period_end->toDateString()} sent for review", $run, [
+            'warnings_open' => $summary['warnings_open'],
+        ]);
 
         return $this->show($run->fresh());
     }

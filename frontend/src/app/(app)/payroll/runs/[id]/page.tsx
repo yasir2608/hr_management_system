@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
+import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
 import { RunIssuesPanel, type IssueSummary } from "@/components/payroll/RunIssuesPanel";
 import { RunResults, type Results } from "@/components/payroll/RunResults";
 import { Badge, Banner, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime, humanize, money } from "@/components/ui";
@@ -23,7 +24,7 @@ type Run = {
   id: string; status: string; country_code: string; country_name: string; currency: string; pay_frequency: string;
   group: { id: string; name: string } | null; period_start: string; period_end: string; pay_date: string;
   employee_count: number; excluded_count: number; created_by: string | null; inputs_gathered_at: string | null;
-  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null;
+  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null;
 };
 
 const PER: Record<string, string> = { annual: "/yr", monthly: "/mo", hourly: "/hr" };
@@ -60,6 +61,16 @@ function RunPage() {
     }
   }
 
+  async function submitForReview() {
+    setError(null);
+    try {
+      setRun(await api<Run>(`/payroll/runs/${id}/submit-review`, { method: "POST" }));
+      setNotice("Sent for review.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not send for review.");
+    }
+  }
+
   async function cancel() {
     if (!window.confirm("Cancel this run? Its snapshot is kept for the record and you can start a new run for the period.")) return;
     try {
@@ -78,13 +89,14 @@ function RunPage() {
   return (
     <>
       <PageHead
-        eyebrow={`Payroll run · ${run.country_name}`}
+        eyebrow={`${run.company_name ?? "Payroll run"} · ${run.country_name} payroll`}
         title={`${run.group?.name ?? "Payroll"}: ${formatDate(run.period_start)} – ${formatDate(run.period_end)}`}
         subtitle={`Pay date ${formatDate(run.pay_date)} · ${run.currency} · started by ${run.created_by ?? "—"}`}
         actions={<>
           <Link className="btn" href="/payroll/runs">All runs</Link>
           {can("payroll.run") && run.status !== "approved" && run.status !== "cancelled" && <button className="btn danger" onClick={() => void cancel()}>Cancel run</button>}
           {can("payroll.run") && (run.status === "draft" || run.status === "calculated") && <button className="btn primary" disabled={calculating} onClick={() => void calculate()}>{calculating ? "Calculating…" : run.status === "calculated" ? "Calculate again" : "Calculate"}</button>}
+          {can("payroll.run") && run.status === "calculated" && (issueSummary?.blocking ?? 1) === 0 && <button className="btn primary" onClick={() => void submitForReview()}>Send for review</button>}
         </>}
       />
       {notice && <Banner tone="success">{notice}</Banner>}
@@ -100,6 +112,7 @@ function RunPage() {
         </div>
       )}
       {run.status === "cancelled" && <Banner tone="error">This run was cancelled.</Banner>}
+      {run.status === "in_review" && <Banner tone="info">In review. Check the totals, each employee’s breakdown and any warnings before approval. Calculating again takes the run back out of review.</Banner>}
       <div className="grid stats">
         <Stat label="Status" value={<Badge status={run.status} label={humanize(run.status)} />} />
         <Stat label="Employees included" value={included.length} />
@@ -120,6 +133,7 @@ function RunPage() {
       )}
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
+      {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}
       {run.lines.some((line) => line.results) && <RunResults rows={included.filter((line) => line.results)} currency={run.currency} restricted={run.amounts_restricted} />}
       <Panel title="Gathered inputs" subtitle="A snapshot taken when the run started. Later changes do not alter it." bodyless>
         <Table headers={["Employee", "Pay in this period", "Allowances and deductions", "Other", "Review"]}>
