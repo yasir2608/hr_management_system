@@ -32,6 +32,7 @@ use App\Http\Controllers\Leave\LeaveCalendarController;
 use App\Http\Controllers\Leave\LeavePolicyController;
 use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\Leave\LeaveTypeController;
+use App\Http\Controllers\Leave\UnpaidLeaveController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
@@ -183,6 +184,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/me/leave/requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancelMine'])->whereUlid('leaveRequest');
         });
         Route::post('/leave/days-preview', [LeaveRequestController::class, 'preview']);
+        Route::get('/leave/unpaid', UnpaidLeaveController::class)->middleware('permission:payroll.run,payroll.view,leave.balances.manage');
         Route::get('/leave/calendar', [LeaveCalendarController::class, 'month'])->middleware('permission:leave.requests.view,leave.approve,self.leave.request');
         Route::get('/leave/employees/{employee}/requests', [LeaveCalendarController::class, 'history'])->whereUlid('employee');
         Route::get('/leave/requests/{leaveRequest}/context', [LeaveRequestController::class, 'context'])->whereUlid('leaveRequest');

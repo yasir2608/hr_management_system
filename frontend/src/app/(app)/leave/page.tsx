@@ -6,6 +6,7 @@ import { CalendarTab } from "@/components/leave/CalendarTab";
 import { LeaveTypesTab } from "@/components/leave/LeaveTypesTab";
 import { MyLeaveTab } from "@/components/leave/MyLeaveTab";
 import { RequestsTab } from "@/components/leave/RequestsTab";
+import { UnpaidFeedTab } from "@/components/leave/UnpaidFeedTab";
 import { PoliciesTab } from "@/components/leave/PoliciesTab";
 import { PageHead } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -20,6 +21,7 @@ const tabs: TabDef[] = [
   { key: "types", label: "Leave types", permissions: ["leave.policies.manage", "leave.requests.view", "self.leave.request"], render: () => <LeaveTypesTab /> },
   { key: "balances", label: "Balances", permissions: ["leave.requests.view", "leave.balances.manage"], render: () => <BalancesTab /> },
   { key: "policies", label: "Policies", permissions: ["leave.policies.manage"], render: () => <PoliciesTab /> },
+  { key: "unpaid", label: "Unpaid leave for payroll", permissions: ["payroll.run", "payroll.view", "leave.balances.manage"], render: () => <UnpaidFeedTab /> },
 ];
 
 function LeavePage() {
@@ -43,7 +45,7 @@ function LeavePage() {
 
 export default function Page() {
   return (
-    <Guard permissions={["leave.policies.manage", "leave.requests.view", "leave.approve", "self.leave.request"]}>
+    <Guard permissions={["leave.policies.manage", "leave.requests.view", "leave.approve", "self.leave.request", "payroll.view"]}>
       <LeavePage />
     </Guard>
   );
