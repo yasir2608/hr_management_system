@@ -233,6 +233,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::middleware('permission:contractors.view,contractors.manage')->group(function (): void {
             Route::get('/contractors', [ContractorController::class, 'index']);
             Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])->whereUlid('contractor');
+            Route::get('/contractor-contracts/upcoming', [ContractController::class, 'upcoming']);
             Route::get('/contractors/{contractor}/contracts', [ContractController::class, 'index'])->whereUlid('contractor');
             Route::get('/contractors/{contractor}/contracts/{contract}/signed', [ContractController::class, 'download'])->whereUlid(['contractor', 'contract']);
         });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ContractorForm, type Contractor, type ContractorField } from "@/components/contractors/ContractorForm";
+import { ContractAlerts } from "@/components/contractors/ContractAlerts";
 import { FieldsModal } from "@/components/contractors/FieldsModal";
 import { Guard } from "@/components/Guard";
 import { Badge, Banner, EmptyState, PageHead, Panel, Person, Table } from "@/components/ui";
@@ -40,6 +41,7 @@ function ContractorsPage() {
         actions={canManage && <><button className="btn" onClick={() => setEditingFields(true)}>Fields</button><button className="btn primary" onClick={() => setAdding(true)}>Add contractor</button></>}
       />
       {notice && <Banner tone="success">{notice}</Banner>}
+      <ContractAlerts />
       <Panel
         title="Contractors"
         right={

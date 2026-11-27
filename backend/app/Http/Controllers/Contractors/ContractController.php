@@ -23,6 +23,38 @@ class ContractController extends Controller
             ->map(fn (ContractorContract $contract): array => self::present($contract))]);
     }
 
+    /**
+     * Draft and active contracts whose end or renewal date falls within the window, or has already passed.
+     */
+    public function upcoming(Request $request): JsonResponse
+    {
+        $request->validate(['days' => ['nullable', 'integer', 'between:1,365']]);
+        $days = $request->integer('days', 60);
+        $today = now()->startOfDay();
+        $until = $today->copy()->addDays($days)->toDateString();
+
+        $alerts = ContractorContract::query()->with('contractor:id,name')->whereIn('status', ['draft', 'active'])
+            ->where(fn ($query) => $query->where('end_date', '<=', $until)->orWhere('renewal_date', '<=', $until))
+            ->get()
+            ->flatMap(function (ContractorContract $contract) use ($today, $until): array {
+                $items = [];
+                foreach (['end_date' => 'ends', 'renewal_date' => 'renewal'] as $column => $kind) {
+                    $date = $contract->{$column};
+                    if ($date !== null && $date->toDateString() <= $until) {
+                        $items[] = [
+                            'kind' => $kind, 'date' => $date->toDateString(), 'days_left' => (int) $today->diffInDays($date, false),
+                            'contract' => self::present($contract), 'contractor' => ['id' => $contract->contractor->id, 'name' => $contract->contractor->name],
+                        ];
+                    }
+                }
+
+                return $items;
+            })
+            ->sortBy('date')->values();
+
+        return response()->json(['data' => $alerts, 'days' => $days]);
+    }
+
     public function store(Request $request, Contractor $contractor): JsonResponse
     {
         $data = $this->validated($request);
