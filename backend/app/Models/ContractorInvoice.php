@@ -29,6 +29,9 @@ class ContractorInvoice extends Model
         'rejected' => ['received'],
     ];
 
+    /** How an external payment was made. */
+    public const PAYMENT_METHODS = ['bank_transfer', 'card', 'cheque', 'cash', 'other'];
+
     /** Unpaid statuses that can fall overdue. */
     public const OUTSTANDING = ['received', 'pending_review', 'approved'];
 
@@ -56,7 +59,7 @@ class ContractorInvoice extends Model
      */
     protected function casts(): array
     {
-        return ['issue_date' => 'date:Y-m-d', 'due_date' => 'date:Y-m-d', 'amount' => 'decimal:2', 'reviewed_at' => 'datetime'];
+        return ['issue_date' => 'date:Y-m-d', 'due_date' => 'date:Y-m-d', 'amount' => 'decimal:2', 'reviewed_at' => 'datetime', 'paid_on' => 'date:Y-m-d'];
     }
 
     /**

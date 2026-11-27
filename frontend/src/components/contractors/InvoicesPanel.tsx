@@ -22,6 +22,7 @@ export type Invoice = {
   can_edit: boolean;
   moves: string[];
   review: { by: string | null; at: string; reason: string | null } | null;
+  payment: { paid_on: string; reference: string; method: string; note: string | null } | null;
   has_attachment: boolean;
 };
 
@@ -92,6 +93,43 @@ function InvoiceModal({ contractorId, invoice, contracts, onClose, onSaved }: { 
   );
 }
 
+function PaymentModal({ contractorId, invoice, onClose, onSaved }: { contractorId: string; invoice: Invoice; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({ paid_on: new Date().toISOString().slice(0, 10), payment_reference: "", payment_method: "bank_transfer", payment_note: "" });
+  const [error, setError] = useState<ApiError | null>(null);
+  const fieldError = (key: string) => error?.errors[key]?.[0];
+
+  async function save() {
+    setError(null);
+    try {
+      await api(`/contractors/${contractorId}/invoices/${invoice.id}/payment`, { method: "POST", body: form });
+      onSaved();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught : new ApiError("Could not record the payment.", 0));
+    }
+  }
+
+  return (
+    <Modal title={`Record payment for ${invoice.reference}`} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" onClick={() => void save()}>Record payment</button></>}>
+      {error && <Banner tone="error">{error.message}</Banner>}
+      <div className="callout">Record a payment you have already made outside the system, e.g. by bank transfer, of {money(invoice.amount, invoice.currency)}. Contractor payments never go through payroll.</div>
+      <div className="formgrid">
+        <Field label="Payment date" required error={fieldError("paid_on")}><input className="input" type="date" value={form.paid_on} onChange={(event) => setForm({ ...form, paid_on: event.target.value })} /></Field>
+        <Field label="Method" required error={fieldError("payment_method")}>
+          <select value={form.payment_method} onChange={(event) => setForm({ ...form, payment_method: event.target.value })}>
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="card">Card</option>
+            <option value="cheque">Cheque</option>
+            <option value="cash">Cash</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label="Payment reference" required full hint="From your bank or payment provider" error={fieldError("payment_reference")}><input className="input" value={form.payment_reference} onChange={(event) => setForm({ ...form, payment_reference: event.target.value })} /></Field>
+        <Field label="Note" optional full><textarea className="input" rows={2} value={form.payment_note} onChange={(event) => setForm({ ...form, payment_note: event.target.value })} /></Field>
+      </div>
+    </Modal>
+  );
+}
+
 /** Invoices received from one contractor. Paid outside payroll. */
 export function InvoicesPanel({ contractorId, canManage, canApprove }: { contractorId: string; canManage: boolean; canApprove: boolean }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
@@ -100,6 +138,7 @@ export function InvoicesPanel({ contractorId, canManage, canApprove }: { contrac
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<Invoice | null>(null);
   const [reason, setReason] = useState("");
+  const [paying, setPaying] = useState<Invoice | null>(null);
 
   const load = useCallback(() => {
     api<{ data: Invoice[] }>(`/contractors/${contractorId}/invoices`).then((result) => setInvoices(result.data));
@@ -140,12 +179,13 @@ export function InvoicesPanel({ contractorId, canManage, canApprove }: { contrac
               <td><strong>{invoice.reference}</strong>{invoice.contract && <div className="tiny">{invoice.contract.title}</div>}{invoice.description && <div className="tiny">{invoice.description}</div>}</td>
               <td>{formatDate(invoice.issue_date)}{invoice.due_date && <div className="tiny">Due {formatDate(invoice.due_date)}</div>}</td>
               <td>{money(invoice.amount, invoice.currency)}</td>
-              <td><Badge status={invoice.display_status} label={humanize(invoice.display_status)} />{invoice.is_overdue && <div className="tiny">{humanize(invoice.status)}</div>}{invoice.review && <div className="tiny">{humanize(invoice.status)} by {invoice.review.by ?? "someone"}{invoice.review.reason && `: ${invoice.review.reason}`}</div>}</td>
+              <td><Badge status={invoice.display_status} label={humanize(invoice.display_status)} />{invoice.is_overdue && <div className="tiny">{humanize(invoice.status)}</div>}{invoice.review && <div className="tiny">{humanize(invoice.status)} by {invoice.review.by ?? "someone"}{invoice.review.reason && `: ${invoice.review.reason}`}</div>}{invoice.payment && <div className="tiny">Paid {formatDate(invoice.payment.paid_on)} · {humanize(invoice.payment.method)} · {invoice.payment.reference}</div>}</td>
               <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                 {invoice.has_attachment && <button className="btn" onClick={() => void download(`/contractors/${contractorId}/invoices/${invoice.id}/attachment`)}>Attachment</button>}{" "}
                 {canManage && invoice.moves.map((status) => <button key={status} className="btn" onClick={() => void move(invoice, status)}>{MOVE_LABELS[status] ?? humanize(status)}</button>)}{" "}
                 {canManage && invoice.can_edit && <button className="btn" onClick={() => setEditing(invoice)}>Edit</button>}{" "}
                 {canApprove && invoice.status === "pending_review" && <><button className="btn primary" onClick={() => void review(invoice, "approve")}>Approve</button> <button className="btn danger" onClick={() => setRejecting(invoice)}>Reject</button></>}
+                {canManage && invoice.status === "approved" && <button className="btn primary" onClick={() => setPaying(invoice)}>Record payment</button>}
               </td>
             </tr>
           ))}
@@ -158,6 +198,7 @@ export function InvoicesPanel({ contractorId, canManage, canApprove }: { contrac
           </Field>
         </Modal>
       )}
+      {paying && <PaymentModal contractorId={contractorId} invoice={paying} onClose={() => setPaying(null)} onSaved={() => { setPaying(null); load(); }} />}
       {editing && <InvoiceModal contractorId={contractorId} invoice={editing === "new" ? undefined : editing} contracts={contracts} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </Panel>
   );

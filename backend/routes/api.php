@@ -250,6 +250,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/contractors/{contractor}/invoices', [InvoiceController::class, 'store'])->whereUlid('contractor');
             Route::post('/contractors/{contractor}/invoices/{invoice}', [InvoiceController::class, 'update'])->whereUlid(['contractor', 'invoice']);
             Route::post('/contractors/{contractor}/invoices/{invoice}/status', [InvoiceController::class, 'move'])->whereUlid(['contractor', 'invoice']);
+            Route::post('/contractors/{contractor}/invoices/{invoice}/payment', [InvoiceController::class, 'pay'])->whereUlid(['contractor', 'invoice']);
         });
         Route::middleware('permission:contractors.invoices.approve')->group(function (): void {
             Route::post('/contractors/{contractor}/invoices/{invoice}/review', [InvoiceController::class, 'review'])->whereUlid(['contractor', 'invoice']);

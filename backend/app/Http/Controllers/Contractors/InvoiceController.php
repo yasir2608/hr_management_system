@@ -88,6 +88,33 @@ class InvoiceController extends Controller
         return response()->json(self::present($invoice->fresh(['contract', 'reviewer'])));
     }
 
+    /**
+     * Record a payment made outside the system. It is never sent to payroll.
+     */
+    public function pay(Request $request, Contractor $contractor, ContractorInvoice $invoice): JsonResponse
+    {
+        abort_unless($invoice->contractor_id === $contractor->id, 404);
+        abort_unless($invoice->status === 'approved', 422, 'Only approved invoices can be marked as paid.');
+
+        $data = $request->validate([
+            'paid_on' => ['required', 'date', 'after_or_equal:'.$invoice->issue_date->toDateString(), 'before_or_equal:today'],
+            'payment_reference' => ['required', 'string', 'max:100'],
+            'payment_method' => ['required', Rule::in(ContractorInvoice::PAYMENT_METHODS)],
+            'payment_note' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'paid_on.after_or_equal' => 'The payment date cannot be before the invoice date.',
+            'paid_on.before_or_equal' => 'The payment date cannot be in the future.',
+        ]);
+
+        $invoice->forceFill([...$data, 'status' => 'paid', 'payment_recorded_by' => $request->user()->id])->save();
+
+        Activity::record('contractor.invoice_paid', "Payment for invoice {$invoice->reference} from {$contractor->name} recorded (paid outside payroll)", $invoice, [
+            'paid_on' => $invoice->paid_on->toDateString(), 'payment_reference' => $invoice->payment_reference, 'payment_method' => $invoice->payment_method,
+        ]);
+
+        return response()->json(self::present($invoice->fresh(['contract', 'reviewer'])));
+    }
+
     public function store(Request $request, Contractor $contractor): JsonResponse
     {
         $data = $this->validated($request, $contractor);
@@ -140,6 +167,10 @@ class InvoiceController extends Controller
             'review' => $invoice->reviewed_at === null ? null : [
                 'by' => $invoice->reviewer?->name, 'at' => $invoice->reviewed_at->toIso8601String(), 'reason' => $invoice->review_reason,
             ],
+            'payment' => $invoice->paid_on === null ? null : [
+                'paid_on' => $invoice->paid_on->toDateString(), 'reference' => $invoice->payment_reference, 'method' => $invoice->payment_method, 'note' => $invoice->payment_note,
+            ],
+            'paid_through_payroll' => false,
         ];
     }
 
