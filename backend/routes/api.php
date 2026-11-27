@@ -22,6 +22,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterCompanyController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\Auth\SsoController;
+use App\Http\Controllers\Company\CompanyBillingController;
 use App\Http\Controllers\Company\CompanyProfileController;
 use App\Http\Controllers\Company\CurrentCompanyController;
 use App\Http\Controllers\Company\PayrollCountryController;
@@ -153,6 +154,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::put('/me/notification-preferences', [NotificationSettingsController::class, 'updateMine']);
         Route::get('/company/notification-settings', [NotificationSettingsController::class, 'show'])->middleware('permission:company.settings.view,company.settings.manage');
         Route::put('/company/notification-settings', [NotificationSettingsController::class, 'update'])->middleware('permission:company.settings.manage');
+        // The company's own M.Y HRMS plan and invoices: company administrators only.
+        Route::get('/company/billing', [CompanyBillingController::class, 'show'])->middleware('permission:company.settings.manage');
 
         Route::get('/dashboard/payroll', [DashboardController::class, 'payroll'])->middleware('permission:payroll.view,payroll.run,payroll.settings.manage');
         Route::get('/dashboard/manager', [DashboardController::class, 'manager'])->middleware('permission:employees.view,leave.approve,attendance.view');
