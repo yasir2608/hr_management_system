@@ -116,6 +116,7 @@ class ApprovalEngine
 
             if ($decision === self::DECISION_REQUEST_INFO) {
                 $request->forceFill(['status' => ApprovalRequest::STATUS_INFO_REQUESTED])->save();
+                $this->notifyStatus($request);
 
                 return;
             }
@@ -154,6 +155,7 @@ class ApprovalEngine
         $step?->forceFill(['status' => ApprovalStep::STATUS_PENDING, 'decided_by' => null, 'decided_at' => null])->save();
         $request->forceFill(['status' => ApprovalRequest::STATUS_PENDING])->save();
         $this->event($request, $step, $user, 'info_provided', $comment);
+        $this->notifyStatus($request);
 
         return $request->fresh(['steps', 'events']);
     }
@@ -245,6 +247,15 @@ class ApprovalEngine
         }
 
         return ['user' => $spec, 'role' => null];
+    }
+
+    private function notifyStatus(ApprovalRequest $request): void
+    {
+        $subject = $request->subject;
+
+        if ($subject instanceof TracksApprovalStatus) {
+            $subject->onApprovalStatusChanged($request);
+        }
     }
 
     private function finish(ApprovalRequest $request, string $status): void

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Leave;
 
 use App\Access\Access;
 use App\Http\Controllers\Controller;
+use App\Leave\BalanceCalculator;
 use App\Leave\SubmitLeaveRequest;
 use App\Leave\WorkingDays;
 use App\Models\Employee;
@@ -70,6 +71,45 @@ class LeaveRequestController extends Controller
             ->latest('start_date')->limit(200)->get();
 
         return response()->json(['data' => $requests->map(fn (LeaveRequest $leave): array => $this->present($leave, true))]);
+    }
+
+    /**
+     * What an approver needs to decide: the employee's balance and who else in the same team
+     * or under the same manager is off on overlapping days.
+     */
+    public function context(LeaveRequest $leaveRequest, BalanceCalculator $balances): JsonResponse
+    {
+        $leaveRequest->loadMissing(['employee', 'leaveType', 'approval.steps']);
+        $employee = $leaveRequest->employee;
+        $userId = auth()->id();
+
+        $isApprover = $leaveRequest->approval?->steps->contains(fn ($step) => $step->approver_user_id === $userId || ($step->approver_role !== null && in_array($step->approver_role, $this->access->roleKeys(), true)));
+        abort_unless($isApprover || $this->access->scopeFor('leave.requests.view')->covers($employee) || $employee->user_id === $userId, 404);
+
+        $colleagues = Employee::query()->whereKeyNot($employee->id)
+            ->where(fn ($query) => $query
+                ->when($employee->current_team_id, fn ($inner) => $inner->orWhere('current_team_id', $employee->current_team_id))
+                ->when($employee->current_manager_id, fn ($inner) => $inner->orWhere('current_manager_id', $employee->current_manager_id)))
+            ->when(! $employee->current_team_id && ! $employee->current_manager_id, fn ($query) => $query->whereRaw('1 = 0'))
+            ->pluck('id');
+
+        $overlapping = LeaveRequest::query()->active()->with(['employee', 'leaveType'])
+            ->whereIn('employee_id', $colleagues)
+            ->where('start_date', '<=', $leaveRequest->end_date)->where('end_date', '>=', $leaveRequest->start_date)
+            ->orderBy('start_date')->get()
+            ->map(fn (LeaveRequest $other): array => [
+                'employee' => $other->employee->fullName(),
+                'leave_type' => $other->leaveType->name,
+                'start_date' => $other->start_date->toDateString(),
+                'end_date' => $other->end_date->toDateString(),
+                'status' => $other->status,
+            ]);
+
+        return response()->json([
+            'request' => self::present($leaveRequest, true),
+            'balance' => $leaveRequest->leaveType->uses_balance ? $balances->balance($employee, $leaveRequest->leaveType, $leaveRequest->start_date->toDateString()) : null,
+            'team_absences' => $overlapping,
+        ]);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Approvals\Approvable;
+use App\Approvals\TracksApprovalStatus;
 use App\Models\Concerns\BelongsToCompany;
 use App\Support\Activity;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'employee_id', 'leave_type_id', 'start_date', 'end_date', 'start_half', 'end_half', 'days', 'unpaid_days',
     'reason', 'attachment_document_id', 'status', 'approval_request_id', 'requested_by', 'decided_at',
 ])]
-class LeaveRequest extends Model implements Approvable
+class LeaveRequest extends Model implements Approvable, TracksApprovalStatus
 {
     use BelongsToCompany, HasUlids;
 
@@ -79,6 +80,11 @@ class LeaveRequest extends Model implements Approvable
     public function paidDays(): float
     {
         return (float) $this->days - (float) $this->unpaid_days;
+    }
+
+    public function onApprovalStatusChanged(ApprovalRequest $request): void
+    {
+        $this->forceFill(['status' => $request->status === ApprovalRequest::STATUS_INFO_REQUESTED ? self::STATUS_INFO_REQUESTED : self::STATUS_PENDING])->save();
     }
 
     public function onApprovalDecided(ApprovalRequest $request): void

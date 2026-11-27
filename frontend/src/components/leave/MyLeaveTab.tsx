@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { approvalStatus } from "@/components/approvals/ApprovalDetail";
+import { ApprovalDetail, approvalStatus } from "@/components/approvals/ApprovalDetail";
 import { Banner, EmptyState, Field, formatDate, Modal, Panel, Stat, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { Balance } from "./BalancesTab";
@@ -38,6 +38,7 @@ export function MyLeaveTab() {
   const [days, setDays] = useState<number | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [answering, setAnswering] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [balanceResult, requestResult, typeResult] = await Promise.all([
@@ -104,13 +105,18 @@ export function MyLeaveTab() {
                 <td><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 5, background: row.leave_type?.color, marginRight: 7 }} />{row.leave_type?.name}</td>
                 <td>{dateRange(row)}</td>
                 <td>{Number(row.days)}{Number(row.unpaid_days) > 0 && <div className="tiny">{Number(row.unpaid_days)} unpaid</div>}</td>
-                <td>{approvalStatus[row.status] ?? row.status}</td>
+                <td>{approvalStatus[row.status] ?? row.status}{row.approval_request_id && <div><button className="link" onClick={() => setAnswering(row.approval_request_id)}>{row.status === "info_requested" ? "Answer the question" : "Details"}</button></div>}</td>
                 <td className="muted" style={{ whiteSpace: "normal" }}>{row.reason ?? "—"}</td>
               </tr>
             ))}
           </Table>
         )}
       </Panel>
+      {answering && (
+        <Modal title="Leave request" onClose={() => setAnswering(null)}>
+          <ApprovalDetail id={answering} onChanged={() => void load()} />
+        </Modal>
+      )}
       {form && (
         <Modal title="Request leave" onClose={() => setForm(null)} footer={<><button className="btn" onClick={() => setForm(null)}>Cancel</button><button className="btn primary" onClick={() => void send()}>Send request</button></>}>
           {error && <Banner tone="error">{error.message}</Banner>}

@@ -180,6 +180,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/me/leave/requests', [LeaveRequestController::class, 'storeMine'])->middleware('throttle:20,1');
         });
         Route::post('/leave/days-preview', [LeaveRequestController::class, 'preview']);
+        Route::get('/leave/requests/{leaveRequest}/context', [LeaveRequestController::class, 'context'])->whereUlid('leaveRequest');
         Route::get('/leave/requests', [LeaveRequestController::class, 'index'])->middleware('permission:leave.requests.view,leave.approve');
         Route::post('/leave/employees/{employee}/requests', [LeaveRequestController::class, 'storeFor'])->whereUlid('employee')->middleware('permission:leave.balances.manage');
         Route::get('/leave/employees/{employee}/balances', [LeaveBalanceController::class, 'forEmployee'])->whereUlid('employee');

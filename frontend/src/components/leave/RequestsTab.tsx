@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { ApprovalDetail, approvalStatus } from "@/components/approvals/ApprovalDetail";
 import { EmptyState, Modal, Panel, Person, Table } from "@/components/ui";
 import { api } from "@/lib/api";
+import { LeaveContext } from "./LeaveContext";
 import { dateRange, type LeaveRequestRow } from "./MyLeaveTab";
 
 /** Leave requests of the people within the viewer's scope. */
 export function RequestsTab() {
   const [rows, setRows] = useState<LeaveRequestRow[] | null>(null);
   const [status, setStatus] = useState("pending,info_requested");
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<LeaveRequestRow | null>(null);
 
   const load = useCallback(async () => {
     setRows((await api<{ data: LeaveRequestRow[] }>("/leave/requests", { query: { status } })).data);
@@ -46,7 +47,7 @@ export function RequestsTab() {
                 <td>{dateRange(row)}</td>
                 <td>{Number(row.days)}</td>
                 <td>{approvalStatus[row.status] ?? row.status}</td>
-                <td style={{ textAlign: "right" }}>{row.approval_request_id && <button className="btn" onClick={() => setOpen(row.approval_request_id)}>Open</button>}</td>
+                <td style={{ textAlign: "right" }}>{row.approval_request_id && <button className="btn" onClick={() => setOpen(row)}>Open</button>}</td>
               </tr>
             ))}
           </Table>
@@ -54,7 +55,8 @@ export function RequestsTab() {
       </Panel>
       {open && (
         <Modal title="Leave request" onClose={() => setOpen(null)}>
-          <ApprovalDetail id={open} onChanged={() => void load()} />
+          <LeaveContext leaveRequestId={open.id} />
+          {open.approval_request_id && <ApprovalDetail id={open.approval_request_id} onChanged={() => void load()} />}
         </Modal>
       )}
     </>
