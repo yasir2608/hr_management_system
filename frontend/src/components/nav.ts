@@ -29,6 +29,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/leave", label: "Leave", icon: "☀", permissions: ["leave.policies.manage", "leave.requests.view", "leave.approve", "self.leave.request"] },
       { href: "/attendance/clock", label: "Clock in / out", icon: "◷", permissions: ["self.attendance.clock"] },
+      { href: "/attendance", label: "Attendance", icon: "▤", permissions: ["self.attendance.clock", "attendance.view", "attendance.manage"] },
     ],
   },
   {
