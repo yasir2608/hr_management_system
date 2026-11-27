@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
     <div className="authwrap">
       <form className="panel authcard" onSubmit={submit} noValidate>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          <div className="logo" style={{ margin: "auto" }}>✦</div>
           <h2>Reset password</h2>
           <div className="tiny">Enter the email address you use to sign in.</div>
         </div>

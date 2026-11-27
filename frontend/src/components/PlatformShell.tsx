@@ -26,21 +26,24 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
     if (status === "guest") router.replace("/login");
   }, [status, router]);
 
-  if (status !== "authenticated" || !user) return <div className="loadingpage">Loading…</div>;
+  if (status !== "authenticated" || !user) return <div className="staff"><div className="loadingpage">Loading…</div></div>;
 
   if (!user.platform_role) {
     return (
-      <div className="loadingpage">
-        <div className="empty">
-          <div className="emptyicon">⌑</div>
-          <h3>This area is only for M.Y HRMS operations staff</h3>
-          <a className="btn" href={`${APP_URL}/login`}>Go to your company sign-in</a>
+      <div className="staff">
+        <div className="loadingpage">
+          <div className="empty">
+            <div className="emptyicon">⌑</div>
+            <h3>This area is only for M.Y HRMS operations staff</h3>
+            <a className="btn" href={`${APP_URL}/login`}>Go to your company sign-in</a>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
+    <div className="staff">
     <div className="shell">
       <aside className="side">
         <div className="brand">
@@ -72,6 +75,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
         </header>
         <div className="content">{children}</div>
       </main>
+    </div>
     </div>
   );
 }

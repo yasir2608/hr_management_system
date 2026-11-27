@@ -50,7 +50,7 @@ export default function AcceptInvitationPage() {
     <div className="authwrap">
       <form className="panel authcard" onSubmit={accept} noValidate>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          <div className="logo" style={{ margin: "auto" }}>✦</div>
           <h2>Accept your invitation</h2>
           {invitation && (
             <div className="tiny">

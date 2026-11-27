@@ -39,7 +39,7 @@ export default function RegisterPage() {
     <div className="authwrap">
       <form className="panel authcard" style={{ width: "min(620px,100%)" }} onSubmit={submit} noValidate>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          <div className="logo" style={{ margin: "auto" }}>✦</div>
           <h2>Set up a company workspace</h2>
           <div className="tiny">You will be the primary administrator. Payroll and other settings come later.</div>
         </div>

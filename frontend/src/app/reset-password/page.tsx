@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
     <div className="authwrap">
       <form className="panel authcard" onSubmit={submit} noValidate>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          <div className="logo" style={{ margin: "auto" }}>✦</div>
           <h2>Choose a new password</h2>
           {link?.email && <div className="tiny">For {link.email}</div>}
         </div>

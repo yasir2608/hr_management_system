@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
+// Staff console theme (navy design), scoped to .staff so it never touches the company HRMS.
+import "./staff.css";
 
 export const metadata: Metadata = {
   title: "M.Y HRMS",

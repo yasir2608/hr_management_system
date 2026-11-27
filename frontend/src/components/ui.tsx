@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+/**
+ * Page title row: title, muted subtitle, actions on the right. The small label above the title (eyebrow) is part of
+ * the staff console's navy design; the company design hides it (its breadcrumb already names the area).
+ */
 export function PageHead({ eyebrow, title, subtitle, actions }: { eyebrow: string; title: string; subtitle?: string; actions?: ReactNode }) {
   return (
     <div className="pagehead">
@@ -48,10 +52,11 @@ export function Badge({ status, label, tone }: { status?: string; label?: string
   return <span className={`badge ${tone ?? badgeTones[key] ?? "gray"}`}>{label ?? humanize(key)}</span>;
 }
 
-export function Stat({ label, value, note, good }: { label: string; value: ReactNode; note?: ReactNode; good?: boolean }) {
+/** A metric card: label with an optional icon badge, a large value and a note, as in the design's dashboard. */
+export function Stat({ label, value, note, good, icon }: { label: string; value: ReactNode; note?: ReactNode; good?: boolean; icon?: string }) {
   return (
     <div className="panel stat">
-      <div className="statlabel">{label}</div>
+      <div className="statlabel"><span>{label}</span>{icon && <span className="staticon">{icon}</span>}</div>
       <div className="statnum">{value}</div>
       {note && <div className={`statnote${good ? " good" : ""}`}>{note}</div>}
     </div>

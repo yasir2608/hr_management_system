@@ -61,7 +61,7 @@ export default function SelectCompanyPage() {
     <div className="authwrap">
       <div className="panel authcard" style={{ width: "min(470px,100%)" }}>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          <div className="logo" style={{ margin: "auto" }}>✦</div>
           <h2>Choose a company</h2>
           <div className="tiny">You have access to more than one company workspace.</div>
         </div>

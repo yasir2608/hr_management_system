@@ -5,12 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { navGroups } from "./nav";
+import { inItem, navGroups, type NavItem } from "./nav";
 import { SearchBox } from "./SearchBox";
-import { initials } from "./ui";
+import { humanize, initials } from "./ui";
+
+const ROLE_NAMES: Record<string, string> = {
+  owner: "Owner", hr_admin: "HR Administrator", payroll_admin: "Payroll Administrator", manager: "Manager", employee: "Employee",
+};
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { status, user, company, signOut, can } = useAuth();
+  const { status, user, company, signOut, can, access } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="authwrap">
         <div className="panel authcard">
           <div className="authhead">
-            <div className="logo" style={{ margin: "auto" }}>MY</div>
+            <div className="logo" style={{ margin: "auto" }}>✦</div>
             <h2>No company to open</h2>
             <div className="tiny">Your account is not linked to an active company workspace. Contact your company administrator.</div>
           </div>
@@ -56,49 +60,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const allowed = (item: NavItem) => !item.permissions || can(...item.permissions);
   const groups = navGroups
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.permissions || can(...item.permissions)) }))
+    .map((group) => ({ ...group, items: group.items.filter(allowed).map((item) => ({ ...item, children: (item.children ?? []).filter(allowed) })) }))
     .filter((group) => group.items.length > 0);
-  const items = groups.flatMap((group) => group.items);
-  const current = items.find((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+  const items = groups.flatMap((group) => group.items.flatMap((item) => [item, ...(item.children ?? [])]));
+  const matchesExactly = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const currentChild = items.filter((item) => matchesExactly(item.href)).sort((a, b) => b.href.length - a.href.length)[0];
+  const roleName = (access?.roles ?? []).map((key) => ROLE_NAMES[key] ?? humanize(key))[0] ?? "Member";
 
   return (
     <div className="shell">
       <aside className="side">
-        <div className="brand">
-          <div className="logo">MY</div>
-          <div>
-            <b>M.Y HRMS</b>
-            <small>People &amp; payroll</small>
-          </div>
-        </div>
-        <div className="company">
-          <small>Company workspace</small>
-          <strong>{company.name}</strong>
-        </div>
-        {groups.map((group) => (
-          <nav className="navgroup" key={group.label} aria-label={group.label}>
+        <Link href="/dashboard" className="brand" style={{ textDecoration: "none" }}>
+          <span className="logo">✦</span>
+          <span>M.Y HRMS</span>
+        </Link>
+        {groups.map((group, index) => (
+          <nav className={`navgroup${index === groups.length - 1 && groups.length > 1 ? " navbottom" : ""}`} key={group.label} aria-label={group.label}>
             <div className="navlabel">{group.label}</div>
-            {group.items.map((item) => (
-              <Link key={item.href} href={item.href} className={`navitem${current?.href === item.href ? " active" : ""}`}>
-                <span className="ico">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
+            {group.items.map((item) => {
+              const open = inItem(item, pathname);
+              const childActive = (item.children ?? []).some((child) => currentChild?.href === child.href);
+              return (
+                <div key={item.href} className="navnode">
+                  <Link href={item.href} className={`navitem${open && !childActive ? " active" : ""}${open ? " open" : ""}`}>
+                    <span className="ico">{item.icon}</span>
+                    <span className="label">{item.label}</span>
+                  </Link>
+                  {open && (item.children ?? []).map((child) => (
+                    <Link key={child.href} href={child.href} className={`navitem sub${currentChild?.href === child.href ? " active" : ""}`}>
+                      <span className="label">{child.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
           </nav>
         ))}
-        <div className="sidefoot">Signed in as {user.email}</div>
+        <div className="sidefoot">
+          <span className="avatar">{initials(user.name)}</span>
+          <div className="usercopy">
+            <b>{user.name}</b>
+            <small>{roleName}</small>
+          </div>
+        </div>
       </aside>
       <main className="main">
         <header className="top">
           <div className="crumb">
-            {company.name} / <b>{current?.label ?? "Workspace"}</b>
+            {company.name} <span className="crumbsep">/</span> <b>{currentChild?.label ?? "Workspace"}</b>
           </div>
           <div className="topright" style={{ position: "relative" }}>
             <SearchBox />
             <span className="env">Demo environment</span>
             <button className="userbtn" onClick={() => setMenuOpen((open) => !open)} aria-haspopup="menu" aria-expanded={menuOpen}>
-              <span className="avatar">{initials(user.name)}</span>
+              <span className="avatar small">{initials(user.name)}</span>
+              <span className="topname">{user.name}</span>
             </button>
             {menuOpen && (
               <div className="menu" role="menu" onClick={() => setMenuOpen(false)}>
@@ -129,7 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         {notice && <div className="toast show" role="status">{notice}</div>}
         <div className="mobilebar">
-          <select aria-label="Choose screen" value={current?.href ?? ""} onChange={(event) => router.push(event.target.value)}>
+          <select aria-label="Choose screen" value={currentChild?.href ?? ""} onChange={(event) => router.push(event.target.value)}>
             {items.map((item) => (
               <option key={item.href} value={item.href}>{item.label}</option>
             ))}

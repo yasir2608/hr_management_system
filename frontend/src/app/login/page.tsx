@@ -114,10 +114,11 @@ export default function LoginPage() {
 
   if (challenge) {
     return (
+      <div className={isStaff ? "staff" : undefined}>
       <div className="authwrap">
         <form className="panel authcard" onSubmit={submitCode} noValidate>
           <div className="authhead">
-            <div className="logo" style={{ margin: "auto" }}>MY</div>
+            <div className="logo" style={{ margin: "auto" }}>✦</div>
             <h2>Verify your sign-in</h2>
             <div className="tiny">{challenge.message}</div>
           </div>
@@ -144,16 +145,28 @@ export default function LoginPage() {
           </div>
         </form>
       </div>
+      </div>
     );
   }
 
+  // Company sign-in follows the company design (two-column card); the staff console keeps its navy design (one card).
   return (
+    <div className={isStaff ? "staff" : undefined}>
     <div className="authwrap">
-      <form className="panel authcard" onSubmit={submit} noValidate>
+      <div className={isStaff ? undefined : "authsplit"}>
+      {!isStaff && (
+        <div className="authbrand">
+          <div>
+            <div className="brandname"><span className="logo">✦</span>M.Y HRMS</div>
+            <p>A clearer way to support your people, wherever they work.</p>
+          </div>
+        </div>
+      )}
+      <form className={isStaff ? "panel authcard" : "authform"} onSubmit={submit} noValidate>
         <div className="authhead">
-          <div className="logo" style={{ margin: "auto" }}>MY</div>
+          {isStaff && <div className="logo" style={{ margin: "auto" }}>MY</div>}
           <h2>{isStaff ? "Staff console" : "Welcome back"}</h2>
-          <div className="tiny">{isStaff ? "Sign-in for M.Y HRMS staff only" : "Sign in to your M.Y HRMS workspace"}</div>
+          <div className="muted">{isStaff ? "Sign-in for M.Y HRMS staff only" : "Sign in to your company workspace"}</div>
         </div>
         {sessionEnded && !error && <Banner tone="info">Your session ended, either after a period of inactivity or because your password changed. Sign in again to continue.</Banner>}
         {error && (
@@ -200,6 +213,8 @@ export default function LoginPage() {
           )}
         </div>
       </form>
+      </div>
+    </div>
     </div>
   );
 }
