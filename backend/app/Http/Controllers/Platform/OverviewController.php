@@ -53,7 +53,7 @@ class OverviewController extends Controller
             ],
             'attention' => $attention,
             'recent_companies' => Company::query()->latest()->limit(5)->get(['id', 'name', 'country_code', 'status', 'created_at']),
-            'recent_staff_activity' => PlatformActivity::query()->with(['actor:id,name', 'company:id,name'])->latest('created_at')->limit(8)->get()
+            'recent_staff_activity' => PlatformActivity::query()->with(['actor:id,name', 'company:id,name'])->latest('created_at')->latest('id')->limit(8)->get()
                 ->map(fn (PlatformActivity $entry): array => [...$entry->only(['id', 'action', 'description', 'created_at']), 'actor' => $entry->actor?->name, 'company' => $entry->company?->only(['id', 'name'])]),
         ]);
     }

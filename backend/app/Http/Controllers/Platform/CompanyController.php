@@ -77,7 +77,7 @@ class CompanyController extends Controller
                 ->map(fn (SupportAccessGrant $grant): array => [
                     ...$grant->only(['id', 'reason', 'ticket_reference', 'expires_at', 'revoked_at', 'created_at']), 'staff' => $grant->user?->name, 'active' => $grant->isActive(),
                 ]),
-            'staff_activity' => PlatformActivity::query()->with('actor:id,name')->where('company_id', $company->id)->latest('created_at')->limit(20)->get()
+            'staff_activity' => PlatformActivity::query()->with('actor:id,name')->where('company_id', $company->id)->latest('created_at')->latest('id')->limit(20)->get()
                 ->map(fn (PlatformActivity $entry): array => [...$entry->only(['id', 'action', 'description', 'created_at']), 'actor' => $entry->actor?->name]),
         ]);
     }

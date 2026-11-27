@@ -9,6 +9,7 @@ import { initials } from "./ui";
 export const platformNav = [
   { href: "/platform/overview", label: "Overview", icon: "◉" },
   { href: "/platform/companies", label: "Customer companies", icon: "▣" },
+  { href: "/platform/users", label: "Customer users", icon: "◎" },
   { href: "/platform/support", label: "Support access", icon: "⚑" },
 ];
 

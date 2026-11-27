@@ -53,6 +53,7 @@ use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
 use App\Http\Controllers\Platform\OverviewController as PlatformOverviewController;
 use App\Http\Controllers\Platform\SupportAccessController;
+use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +79,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/companies', [PlatformCompanyController::class, 'store']);
         Route::post('/companies/{company}/suspend', [PlatformCompanyStatusController::class, 'suspend'])->whereUlid('company');
         Route::post('/companies/{company}/reactivate', [PlatformCompanyStatusController::class, 'reactivate'])->whereUlid('company');
+        Route::post('/users/{user}/mfa-reset', [PlatformUserController::class, 'resetMfa'])->whereUlid('user');
+        Route::post('/users/{user}/lock', [PlatformUserController::class, 'lock'])->whereUlid('user');
+        Route::post('/users/{user}/unlock', [PlatformUserController::class, 'unlock'])->whereUlid('user');
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.
@@ -85,6 +89,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/overview', [PlatformOverviewController::class, 'show']);
         Route::get('/companies', [PlatformCompanyController::class, 'index']);
         Route::get('/companies/{company}', [PlatformCompanyController::class, 'show'])->whereUlid('company');
+        Route::get('/users', [PlatformUserController::class, 'index']);
+        Route::get('/users/{user}', [PlatformUserController::class, 'show'])->whereUlid('user');
         Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
         Route::get('/support-access', [SupportAccessController::class, 'index']);
         Route::post('/support-access', [SupportAccessController::class, 'store'])->middleware('throttle:20,1');
