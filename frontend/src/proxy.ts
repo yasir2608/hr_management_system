@@ -27,6 +27,12 @@ export function proxy(request: NextRequest) {
     if (matchesPath(pathname, COMPANY_ONLY_PATHS)) {
       return toOtherAddress(`${APP_URL}${pathname}${search}`, request);
     }
+    if (pathname === "/login") {
+      return NextResponse.rewrite(new URL(`/staff-login${search}`, request.url));
+    }
+    if (pathname === "/staff-login") {
+      return NextResponse.redirect(new URL(`/login${search}`, request.url));
+    }
     if (matchesPath(pathname, STAFF_PATHS)) {
       return NextResponse.rewrite(new URL(`/platform${pathname}${search}`, request.url));
     }
@@ -34,6 +40,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/staff-login") {
+    return toOtherAddress(`${ADMIN_URL}/login${search}`, request);
+  }
   if (pathname === "/platform" || pathname.startsWith("/platform/")) {
     return toOtherAddress(`${ADMIN_URL}${pathname.replace(/^\/platform/, "") || "/overview"}${search}`, request);
   }
