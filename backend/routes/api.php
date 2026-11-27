@@ -23,6 +23,7 @@ use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
+use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
@@ -119,6 +120,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::put('/employees/{employee}/payroll-details', [EmployeeChangeController::class, 'updatePayrollDetails'])->whereUlid('employee');
         Route::get('/employees/form-options', [EmployeeController::class, 'formOptions'])->middleware('permission:employees.manage,payroll.settings.manage');
         Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.manage');
+
+        // Employee import
+        Route::middleware('permission:employees.import')->prefix('employee-imports')->group(function (): void {
+            Route::get('/columns', [EmployeeImportController::class, 'columns']);
+            Route::get('/template', [EmployeeImportController::class, 'template']);
+            Route::post('/', [EmployeeImportController::class, 'store'])->middleware('throttle:20,1');
+            Route::get('/{import}', [EmployeeImportController::class, 'show'])->whereUlid('import');
+            Route::post('/{import}/cancel', [EmployeeImportController::class, 'cancel'])->whereUlid('import');
+        });
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');

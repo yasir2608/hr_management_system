@@ -59,7 +59,12 @@ function EmployeesPage() {
         eyebrow="People"
         title="Employees"
         subtitle="Keep employee details, employment history and payroll readiness in one place."
-        actions={can("employees.manage") && <Link className="btn primary" href="/employees/new">Add employee</Link>}
+        actions={
+          <>
+            {can("employees.import") && <Link className="btn" href="/employees/import">Import</Link>}
+            {can("employees.manage") && <Link className="btn primary" href="/employees/new">Add employee</Link>}
+          </>
+        }
       />
       {flash && <Banner tone="success">{flash}</Banner>}
       <div className="grid stats">
