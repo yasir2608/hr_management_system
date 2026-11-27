@@ -342,6 +342,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::middleware('permission:payroll.export')->group(function (): void {
             Route::get('/payroll/bank-exports', [BankExportController::class, 'index']);
             Route::get('/payroll/bank-exports/{export}/download', [BankExportController::class, 'download'])->whereUlid('export');
+            Route::post('/payroll/bank-exports/{export}/payment', [BankExportController::class, 'recordPayment'])->whereUlid('export');
             Route::get('/payroll/runs/{run}/bank-file', [BankExportController::class, 'preview'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/bank-exports', [BankExportController::class, 'store'])->whereUlid('run');
         });

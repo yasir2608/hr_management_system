@@ -12,9 +12,11 @@ type Preview = {
   payments?: { employee_id: string; name: string; employee_number: string | null; bank_name: string | null; account: string; currency: string; amount: string }[];
   excluded?: Excluded[]; warnings?: string[]; payment_count?: number; total?: string; currency?: string;
 };
+type PaymentStatus = "not_recorded" | "paid" | "failed";
+type Payment = { status: PaymentStatus; paid_on: string | null; reference: string | null; note: string | null; recorded_by: string | null; recorded_at: string | null };
 export type BankExport = {
   id: string; format_name: string; file_name: string; currency: string; payment_count: number; download_count: number; total: string;
-  excluded: Excluded[]; created_by: string | null; created_at: string | null; last_downloaded_at: string | null;
+  excluded: Excluded[]; created_by: string | null; created_at: string | null; last_downloaded_at: string | null; payment: Payment;
   run: { id: string; kind: string; group: string | null; period_start: string; period_end: string; pay_date: string };
 };
 
@@ -126,15 +128,77 @@ export function BankFileModal({ runId, onClose, onCreated }: { runId: string; on
   );
 }
 
-/** Bank files already created, with a download button. Used on a run and on the Bank exports page. */
-export function BankExportsTable({ exports, showRun, onDownloaded }: { exports: BankExport[]; showRun?: boolean; onDownloaded?: () => void }) {
+const PAYMENT_LABELS: Record<PaymentStatus, { label: string; tone: string }> = {
+  not_recorded: { label: "Not recorded", tone: "gray" }, paid: { label: "Paid", tone: "green" }, failed: { label: "Failed", tone: "red" },
+};
+
+function PaymentCell({ payment }: { payment: Payment }) {
+  const { label, tone } = PAYMENT_LABELS[payment.status];
+  return (
+    <>
+      <Badge tone={tone} label={label} />
+      {payment.paid_on && <div className="tiny">on {formatDate(payment.paid_on)}</div>}
+      {payment.reference && <div className="tiny">Ref. {payment.reference}</div>}
+      {payment.note && <div className="tiny">{payment.note}</div>}
+      {payment.recorded_by && <div className="tiny">recorded by {payment.recorded_by}</div>}
+    </>
+  );
+}
+
+/** Record what the bank did with an uploaded file. A record only: M.Y HRMS never sends or checks payments. */
+function RecordPaymentModal({ item, onClose, onSaved }: { item: BankExport; onClose: () => void; onSaved: () => void }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [status, setStatus] = useState<PaymentStatus>(item.payment.status === "not_recorded" ? "paid" : item.payment.status);
+  const payDate = item.run.pay_date.slice(0, 10);
+  const [paidOn, setPaidOn] = useState(item.payment.paid_on ?? (payDate <= today ? payDate : today));
+  const [reference, setReference] = useState(item.payment.reference ?? "");
+  const [note, setNote] = useState(item.payment.note ?? "");
+  const [error, setError] = useState<ApiError | null>(null);
+  const fieldError = (key: string) => error?.errors[key]?.[0];
+
+  async function save() {
+    setError(null);
+    try {
+      await api(`/payroll/bank-exports/${item.id}/payment`, {
+        method: "POST",
+        body: { status, paid_on: status === "paid" ? paidOn : null, reference: status === "not_recorded" ? null : reference || null, note: status === "not_recorded" ? null : note || null },
+      });
+      onSaved();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught : new ApiError("Could not save.", 0));
+    }
+  }
+
+  return (
+    <Modal title="Record payment" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" onClick={() => void save()}>Save</button></>}>
+      {error && <Banner tone="error">{error.message}</Banner>}
+      <p className="tiny" style={{ marginBottom: 12 }}>
+        {item.format_name} · {item.payment_count} payments · {money(item.total, item.currency)}. Record what your bank reports; this does not send or confirm any payment.
+      </p>
+      <div className="formgrid">
+        <Field label="Status" required full error={fieldError("status")}>
+          <label className="checkrow"><input type="radio" checked={status === "paid"} onChange={() => setStatus("paid")} /> Paid by the bank</label>
+          <label className="checkrow"><input type="radio" checked={status === "failed"} onChange={() => setStatus("failed")} /> Failed or rejected by the bank</label>
+          {item.payment.status !== "not_recorded" && <label className="checkrow"><input type="radio" checked={status === "not_recorded"} onChange={() => setStatus("not_recorded")} /> Not recorded (clear this record)</label>}
+        </Field>
+        {status === "paid" && <Field label="Payment date" required error={fieldError("paid_on")}><input className="input" type="date" value={paidOn} max={today} onChange={(event) => setPaidOn(event.target.value)} /></Field>}
+        {status !== "not_recorded" && <Field label="Payment reference" optional error={fieldError("reference")} hint="The bank's batch or payment reference, if you have one."><input className="input" value={reference} maxLength={100} onChange={(event) => setReference(event.target.value)} /></Field>}
+        {status !== "not_recorded" && <Field label={status === "failed" ? "What went wrong" : "Note"} required={status === "failed"} optional={status !== "failed"} full error={fieldError("note")}><textarea className="input" rows={2} value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} /></Field>}
+      </div>
+    </Modal>
+  );
+}
+
+/** Bank files already created, with download and payment recording. Used on a run and on the Bank exports page. */
+export function BankExportsTable({ exports, showRun, onChange }: { exports: BankExport[]; showRun?: boolean; onChange?: (message?: string) => void }) {
   const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState<BankExport | null>(null);
 
   async function get(item: BankExport) {
     setError(null);
     try {
       await download(`/payroll/bank-exports/${item.id}/download`);
-      onDownloaded?.();
+      onChange?.();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Could not download the file.");
     }
@@ -143,13 +207,14 @@ export function BankExportsTable({ exports, showRun, onDownloaded }: { exports: 
   return (
     <>
       {error && <div style={{ padding: "10px 16px 0" }}><Banner tone="error">{error}</Banner></div>}
-      <Table headers={[...(showRun ? ["Payroll run"] : []), "File", "Payments", "Total", "Created", "Downloads", ""]}>
+      {recording && <RecordPaymentModal item={recording} onClose={() => setRecording(null)} onSaved={() => { setRecording(null); onChange?.("Payment record saved."); }} />}
+      <Table headers={[...(showRun ? ["Payroll run"] : []), "File", "Payments", "Total", "Created", "Downloads", "Payment", ""]}>
         {exports.map((item) => (
           <tr key={item.id}>
             {showRun && (
               <td>
                 <Link href={`/payroll/runs/${item.run.id}`}><strong>{item.run.group ?? "Payroll"}</strong></Link>{item.run.kind !== "regular" && <> <Badge tone="blue" label={item.run.kind === "adjustment" ? "Adjustment" : "Replacement"} /></>}
-                <div className="tiny">{formatDate(item.run.period_start)} – {formatDate(item.run.period_end)} · paid {formatDate(item.run.pay_date)}</div>
+                <div className="tiny">{formatDate(item.run.period_start)} – {formatDate(item.run.period_end)} · pay date {formatDate(item.run.pay_date)}</div>
               </td>
             )}
             <td>{item.format_name}<div className="tiny">{item.file_name}</div></td>
@@ -157,7 +222,11 @@ export function BankExportsTable({ exports, showRun, onDownloaded }: { exports: 
             <td>{money(item.total, item.currency)}</td>
             <td>{item.created_at ? formatDateTime(item.created_at) : "—"}<div className="tiny">by {item.created_by ?? "—"}</div></td>
             <td>{item.download_count}{item.last_downloaded_at && <div className="tiny">last {formatDateTime(item.last_downloaded_at)}</div>}</td>
-            <td style={{ textAlign: "right" }}><button className="btn soft" onClick={() => void get(item)}>Download</button></td>
+            <td><PaymentCell payment={item.payment} /></td>
+            <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+              <button className="btn soft" onClick={() => void get(item)}>Download</button>{" "}
+              <button className="btn" onClick={() => setRecording(item)}>{item.payment.status === "not_recorded" ? "Record payment" : "Update"}</button>
+            </td>
           </tr>
         ))}
       </Table>
@@ -182,7 +251,7 @@ export function RunBankExportsPanel({ runId, version }: { runId: string; version
 
   return (
     <Panel title="Bank files" subtitle="Files created from this run. Creating a file does not send money." bodyless>
-      <BankExportsTable exports={exports} onDownloaded={() => void load()} />
+      <BankExportsTable exports={exports} onChange={() => void load()} />
     </Panel>
   );
 }

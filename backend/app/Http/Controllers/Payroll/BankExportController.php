@@ -15,6 +15,7 @@ use App\Support\Activity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -29,9 +30,10 @@ class BankExportController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $data = $request->validate(['run' => ['nullable', 'ulid']]);
-        $exports = BankExport::query()->with(['run.group:id,name', 'creator:id,name'])
+        $data = $request->validate(['run' => ['nullable', 'ulid'], 'payment_status' => ['nullable', Rule::in(BankExport::PAYMENT_STATUSES)]]);
+        $exports = BankExport::query()->with(['run.group:id,name', 'creator:id,name', 'paymentRecorder:id,name'])
             ->when($data['run'] ?? null, fn ($query, string $run) => $query->where('payroll_run_id', $run))
+            ->when($data['payment_status'] ?? null, fn ($query, string $status) => $query->where('payment_status', $status))
             ->latest()->limit(300)->get();
 
         return response()->json(['data' => $exports->map(fn (BankExport $export): array => $this->present($export)), 'notice' => self::NOTICE]);
@@ -128,6 +130,52 @@ class BankExportController extends Controller
         ]);
     }
 
+    /**
+     * Records what happened at the bank after the file was uploaded: paid (with the date and an optional bank
+     * reference), failed (with what went wrong), or back to not recorded to undo a mistake. A record only.
+     */
+    public function recordPayment(Request $request, BankExport $export): JsonResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(BankExport::PAYMENT_STATUSES)],
+            'paid_on' => ['required_if:status,'.BankExport::PAID, 'nullable', 'date', 'after_or_equal:'.$export->created_at->toDateString(), 'before_or_equal:today'],
+            'reference' => ['nullable', 'string', 'max:100'],
+            'note' => ['required_if:status,'.BankExport::FAILED, 'nullable', 'string', 'max:500'],
+        ], [
+            'paid_on.required_if' => 'Enter the date the bank made the payments.',
+            'paid_on.after_or_equal' => 'The payment date cannot be before the file was created.',
+            'paid_on.before_or_equal' => 'The payment date cannot be in the future.',
+            'note.required_if' => 'Say what went wrong, for example the bank’s rejection reason.',
+        ]);
+
+        $before = ['status' => $export->payment_status, 'paid_on' => $export->paid_on?->toDateString(), 'reference' => $export->payment_reference];
+        $recorded = $data['status'] !== BankExport::NOT_RECORDED;
+        $export->forceFill([
+            'payment_status' => $data['status'],
+            'paid_on' => $data['status'] === BankExport::PAID ? $data['paid_on'] : null,
+            'payment_reference' => $recorded ? ($data['reference'] ?? null) : null,
+            'payment_note' => $recorded ? ($data['note'] ?? null) : null,
+            'payment_recorded_by' => $recorded ? $request->user()->id : null,
+            'payment_recorded_at' => $recorded ? now() : null,
+        ])->save();
+
+        $run = $export->run;
+        $period = "{$run->period_start->toDateString()} to {$run->period_end->toDateString()}";
+        $description = match ($data['status']) {
+            BankExport::PAID => "Bank file “{$export->file_name}” recorded as paid on {$export->paid_on->toDateString()} (payroll run {$period})",
+            BankExport::FAILED => "Bank file “{$export->file_name}” recorded as failed (payroll run {$period})",
+            default => "Payment record cleared for bank file “{$export->file_name}” (payroll run {$period})",
+        };
+        Activity::record('payroll.bank_payment_recorded', $description, $export, [
+            'payroll_run_id' => $export->payroll_run_id,
+            'before' => $before,
+            'after' => ['status' => $export->payment_status, 'paid_on' => $export->paid_on?->toDateString(), 'reference' => $export->payment_reference],
+            'note' => $export->payment_note,
+        ]);
+
+        return response()->json($this->present($export->load(['run.group:id,name', 'creator:id,name', 'paymentRecorder:id,name'])));
+    }
+
     private function ensureApproved(PayrollRun $run): void
     {
         abort_unless($run->status === PayrollRun::APPROVED, 422, 'Bank files can only be created from an approved payroll run.');
@@ -165,6 +213,14 @@ class BankExportController extends Controller
             'created_by' => $export->creator?->name,
             'created_at' => $export->created_at?->toIso8601String(),
             'last_downloaded_at' => $export->last_downloaded_at?->toIso8601String(),
+            'payment' => [
+                'status' => $export->payment_status,
+                'paid_on' => $export->paid_on?->toDateString(),
+                'reference' => $export->payment_reference,
+                'note' => $export->payment_note,
+                'recorded_by' => $export->paymentRecorder?->name,
+                'recorded_at' => $export->payment_recorded_at?->toIso8601String(),
+            ],
         ];
     }
 }

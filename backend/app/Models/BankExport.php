@@ -19,12 +19,23 @@ class BankExport extends Model
 {
     use BelongsToCompany, HasUlids;
 
+    public const NOT_RECORDED = 'not_recorded';
+
+    public const PAID = 'paid';
+
+    public const FAILED = 'failed';
+
+    public const PAYMENT_STATUSES = [self::NOT_RECORDED, self::PAID, self::FAILED];
+
+    /** @var array<string, mixed> */
+    protected $attributes = ['payment_status' => self::NOT_RECORDED];
+
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['excluded' => 'array', 'content' => 'encrypted', 'payment_count' => 'integer', 'total_cents' => 'integer', 'download_count' => 'integer', 'last_downloaded_at' => 'datetime'];
+        return ['excluded' => 'array', 'content' => 'encrypted', 'paid_on' => 'date:Y-m-d', 'payment_recorded_at' => 'datetime', 'payment_count' => 'integer', 'total_cents' => 'integer', 'download_count' => 'integer', 'last_downloaded_at' => 'datetime'];
     }
 
     /**
@@ -49,5 +60,13 @@ class BankExport extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function paymentRecorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'payment_recorded_by');
     }
 }

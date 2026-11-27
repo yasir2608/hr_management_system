@@ -201,5 +201,48 @@ class BankFileExportTest extends TestCase
         $this->inCompany($hr)->get("/api/payroll/bank-exports/{$id}/download")->assertForbidden();
         $this->inCompany($this->memberWithRole(Role::PAYROLL_ADMIN))->get("/api/payroll/bank-exports/{$id}/download")->assertOk();
         $this->assertSame(1, $this->asCompany(fn () => BankFormat::query()->count()));
+        $this->inCompany($hr)->postJson("/api/payroll/bank-exports/{$id}/payment", ['status' => 'paid', 'paid_on' => '2026-03-10'])->assertForbidden();
+    }
+
+    public function test_a_payment_is_recorded_with_a_date_and_optional_reference_and_logged(): void
+    {
+        $run = $this->marchRun();
+        $id = $this->export($run, $this->format(), $this->inCompany()->getJson("/api/payroll/runs/{$run}/bank-file")->json());
+        $url = "/api/payroll/bank-exports/{$id}/payment";
+
+        $this->inCompany()->getJson('/api/payroll/bank-exports')->assertJsonPath('data.0.payment.status', 'not_recorded');
+        $this->inCompany()->postJson($url, ['status' => 'paid'])->assertJsonValidationErrors(['paid_on' => 'Enter the date the bank made the payments.']);
+        $this->inCompany()->postJson($url, ['status' => 'paid', 'paid_on' => '2026-03-11'])->assertJsonValidationErrors(['paid_on' => 'The payment date cannot be in the future.']);
+        $this->inCompany()->postJson($url, ['status' => 'paid', 'paid_on' => '2026-03-09'])->assertJsonValidationErrors(['paid_on' => 'The payment date cannot be before the file was created.']);
+
+        // Paid without a reference: the reference is optional.
+        $this->inCompany()->postJson($url, ['status' => 'paid', 'paid_on' => '2026-03-10'])->assertOk()
+            ->assertJsonPath('payment.status', 'paid')->assertJsonPath('payment.paid_on', '2026-03-10')->assertJsonPath('payment.reference', null)
+            ->assertJsonPath('payment.recorded_by', $this->member->name);
+        $this->inCompany()->postJson($url, ['status' => 'paid', 'paid_on' => '2026-03-10', 'reference' => 'BACS-778812'])->assertOk()->assertJsonPath('payment.reference', 'BACS-778812');
+
+        $logs = $this->asCompany(fn () => ActivityLog::query()->where('action', 'payroll.bank_payment_recorded')->get());
+        $this->assertCount(2, $logs);
+        $second = $logs->first(fn (ActivityLog $log): bool => $log->properties['after']['reference'] === 'BACS-778812');
+        $this->assertSame(['status' => 'paid', 'paid_on' => '2026-03-10', 'reference' => null], $second->properties['before']);
+        $this->assertSame($run, $second->properties['payroll_run_id']);
+
+        $this->inCompany()->getJson('/api/payroll/bank-exports?payment_status=paid')->assertJsonCount(1, 'data');
+        $this->inCompany()->getJson('/api/payroll/bank-exports?payment_status=failed')->assertJsonCount(0, 'data');
+    }
+
+    public function test_a_failed_payment_needs_a_reason_and_a_record_can_be_cleared(): void
+    {
+        $run = $this->marchRun();
+        $id = $this->export($run, $this->format(), $this->inCompany()->getJson("/api/payroll/runs/{$run}/bank-file")->json());
+        $url = "/api/payroll/bank-exports/{$id}/payment";
+
+        $this->inCompany()->postJson($url, ['status' => 'failed'])->assertJsonValidationErrors(['note' => 'Say what went wrong, for example the bank’s rejection reason.']);
+        $this->inCompany()->postJson($url, ['status' => 'failed', 'note' => 'Rejected: file submitted after cut-off', 'paid_on' => '2026-03-10'])->assertOk()
+            ->assertJsonPath('payment.status', 'failed')->assertJsonPath('payment.paid_on', null)->assertJsonPath('payment.note', 'Rejected: file submitted after cut-off');
+
+        $this->inCompany()->postJson($url, ['status' => 'not_recorded', 'reference' => 'ignored'])->assertOk()
+            ->assertJsonPath('payment', ['status' => 'not_recorded', 'paid_on' => null, 'reference' => null, 'note' => null, 'recorded_by' => null, 'recorded_at' => null]);
+        $this->assertDatabaseHas('activity_log', ['action' => 'payroll.bank_payment_recorded', 'description' => 'Payment record cleared for bank file “'.$this->asCompany(fn () => BankExport::query()->value('file_name')).'” (payroll run 2026-03-01 to 2026-03-31)']);
     }
 }
