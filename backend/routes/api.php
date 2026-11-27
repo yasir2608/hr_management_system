@@ -6,6 +6,7 @@ use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
+use App\Http\Controllers\Activity\ActivityHistoryController;
 use App\Http\Controllers\Activity\ActivityIntegrityController;
 use App\Http\Controllers\Approvals\ApprovalController;
 use App\Http\Controllers\Approvals\ApprovalInboxController;
@@ -387,6 +388,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Activity history
         Route::get('/activity/integrity', ActivityIntegrityController::class)->middleware('permission:activity.view');
+        Route::get('/activity', [ActivityHistoryController::class, 'index'])->middleware('permission:activity.view');
+        Route::get('/activity/export', [ActivityHistoryController::class, 'export'])->middleware('permission:activity.view');
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');

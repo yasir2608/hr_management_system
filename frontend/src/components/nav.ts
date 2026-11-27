@@ -71,6 +71,7 @@ export const navGroups: NavGroup[] = [
         href: "/settings/roles", label: "Roles & permissions", icon: "♧", permissions: ["users.view", "users.manage", "roles.manage"],
         children: [{ href: "/settings/users", label: "Users", icon: "♙", permissions: ["users.view", "users.manage"] }],
       },
+      { href: "/settings/activity", label: "Activity history", icon: "◷", permissions: ["activity.view"] },
     ],
   },
 ];
