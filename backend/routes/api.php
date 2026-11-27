@@ -31,6 +31,7 @@ use App\Http\Controllers\Contractors\ContractorController;
 use App\Http\Controllers\Contractors\ContractorFieldController;
 use App\Http\Controllers\Contractors\ContractorReportController;
 use App\Http\Controllers\Contractors\InvoiceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
@@ -114,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('company')->group(function (): void {
         Route::get('/company', [CurrentCompanyController::class, 'show']);
         Route::get('/search', SearchController::class)->middleware('throttle:60,1');
+        Route::get('/dashboard/hr', [DashboardController::class, 'hr'])->middleware('permission:employees.view,employees.manage');
 
         // Company setup
         Route::middleware('permission:company.settings.view,company.settings.manage')->group(function (): void {
