@@ -7,6 +7,7 @@ use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
 use App\Http\Controllers\Activity\ActivityIntegrityController;
 use App\Http\Controllers\Approvals\ApprovalController;
+use App\Http\Controllers\Attendance\AttendanceExceptionController;
 use App\Http\Controllers\Attendance\AttendanceHistoryController;
 use App\Http\Controllers\Attendance\ClockController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
@@ -215,6 +216,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         Route::get('/me/attendance', [AttendanceHistoryController::class, 'mine'])->middleware('permission:self.attendance.clock');
         Route::get('/attendance/records', [AttendanceHistoryController::class, 'index'])->middleware('permission:attendance.view,attendance.manage');
+        Route::get('/attendance/exceptions', AttendanceExceptionController::class)->middleware('permission:attendance.view,attendance.manage');
         Route::get('/attendance/employees/{employee}', [AttendanceHistoryController::class, 'forEmployee'])->whereUlid('employee');
 
         // Activity history

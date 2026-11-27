@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MonthView } from "@/components/attendance/MonthView";
 import { RecordsTab } from "@/components/attendance/RecordsTab";
+import { ExceptionsTab } from "@/components/attendance/ExceptionsTab";
 import { Guard } from "@/components/Guard";
 import { PageHead } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -13,6 +14,7 @@ type TabDef = { key: string; label: string; permissions: string[]; render: () =>
 const tabs: TabDef[] = [
   { key: "mine", label: "My attendance", permissions: ["self.attendance.clock"], render: () => <MonthView path="/me/attendance" title="My shifts" /> },
   { key: "records", label: "Records", permissions: ["attendance.view", "attendance.manage"], render: () => <RecordsTab /> },
+  { key: "exceptions", label: "Exceptions", permissions: ["attendance.view", "attendance.manage"], render: () => <ExceptionsTab /> },
 ];
 
 function AttendancePage() {
