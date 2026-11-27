@@ -2,6 +2,7 @@
 
 import { Guard } from "@/components/Guard";
 import { LeaveTypesTab } from "@/components/leave/LeaveTypesTab";
+import { PoliciesTab } from "@/components/leave/PoliciesTab";
 import { PageHead } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useTab } from "@/lib/useTab";
@@ -10,6 +11,7 @@ type TabDef = { key: string; label: string; permissions: string[]; render: () =>
 
 const tabs: TabDef[] = [
   { key: "types", label: "Leave types", permissions: ["leave.policies.manage", "leave.requests.view", "self.leave.request"], render: () => <LeaveTypesTab /> },
+  { key: "policies", label: "Policies", permissions: ["leave.policies.manage"], render: () => <PoliciesTab /> },
 ];
 
 function LeavePage() {

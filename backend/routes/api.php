@@ -27,6 +27,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Leave\LeavePolicyController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
@@ -175,6 +176,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/types', [LeaveTypeController::class, 'store']);
             Route::put('/types/{leaveType}', [LeaveTypeController::class, 'update']);
             Route::post('/types/starters', [LeaveTypeController::class, 'addStarters']);
+            Route::get('/policies', [LeavePolicyController::class, 'index']);
+            Route::post('/policies', [LeavePolicyController::class, 'store']);
+            Route::post('/policies/{policy}/versions', [LeavePolicyController::class, 'newVersion']);
+            Route::get('/policies/preview', [LeavePolicyController::class, 'preview']);
         });
 
         // Activity history
