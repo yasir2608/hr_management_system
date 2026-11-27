@@ -18,6 +18,55 @@ use Illuminate\Http\Request;
 class EmployeeController extends Controller
 {
     /**
+     * The directory: only people within the viewer's scope, with search, filters and counts.
+     */
+    public function index(Request $request, Access $access): JsonResponse
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'string'],
+            'department_id' => ['nullable', 'string'],
+            'team_id' => ['nullable', 'string'],
+            'location_id' => ['nullable', 'string'],
+            'work_country' => ['nullable', 'string', 'size:2'],
+            'sort' => ['nullable', 'in:name,start_date,employee_number'],
+            'per_page' => ['nullable', 'integer', 'between:5,200'],
+        ]);
+
+        $scoped = fn () => $access->scopeFor('employees.view')->apply(Employee::query());
+
+        $query = $scoped()
+            ->with(['department:id,name', 'team:id,name', 'location:id,name', 'manager'])
+            ->when($filters['search'] ?? null, function ($query, string $search): void {
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
+                $query->where(fn ($inner) => $inner->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)
+                    ->orWhere('preferred_name', 'like', $like)->orWhere('employee_number', 'like', $like)
+                    ->orWhere('work_email', 'like', $like)->orWhere('current_job_title', 'like', $like));
+            })
+            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->whereIn('current_status', explode(',', $status)))
+            ->when(! isset($filters['status']), fn ($query) => $query->where('current_status', '!=', Employee::STATUS_ENDED))
+            ->when($filters['department_id'] ?? null, fn ($query, string $id) => $query->where('current_department_id', $id))
+            ->when($filters['team_id'] ?? null, fn ($query, string $id) => $query->where('current_team_id', $id))
+            ->when($filters['location_id'] ?? null, fn ($query, string $id) => $query->where('current_location_id', $id))
+            ->when($filters['work_country'] ?? null, fn ($query, string $code) => $query->where('work_country', strtoupper($code)));
+
+        match ($filters['sort'] ?? 'name') {
+            'start_date' => $query->orderByDesc('start_date'),
+            'employee_number' => $query->orderBy('employee_number'),
+            default => $query->orderBy('first_name')->orderBy('last_name'),
+        };
+
+        $page = $query->paginate($filters['per_page'] ?? 25);
+
+        return response()->json([
+            'data' => collect($page->items())->map(fn (Employee $employee): array => EmployeePresenter::summary($employee)),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'per_page' => $page->perPage()],
+            // Counts respect the viewer's scope too.
+            'status_counts' => $scoped()->selectRaw('current_status, count(*) as total')->groupBy('current_status')->pluck('total', 'current_status'),
+        ]);
+    }
+
+    /**
      * Everything the add/edit form needs: lists, country fields and why fields are required.
      */
     public function formOptions(Access $access): JsonResponse

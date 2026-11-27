@@ -4,10 +4,18 @@ namespace Database\Seeders;
 
 use App\Access\PermissionCatalogue;
 use App\Access\StarterRoles;
+use App\Employees\EmployeeRecord;
 use App\Models\Company;
+use App\Models\CompanyPayrollCountry;
+use App\Models\CompanySetting;
 use App\Models\CompanyUser;
+use App\Models\Department;
+use App\Models\Employee;
+use App\Models\Location;
 use App\Models\Role;
+use App\Models\Team;
 use App\Models\User;
+use App\Tenancy\CurrentCompany;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -61,6 +69,64 @@ class DemoSeeder extends Seeder
 
         // M.Y HRMS operations staff: not a member of any company.
         $this->user('ops@myhrms.example', 'Omar Siddiqui')->forceFill(['platform_role' => 'ops'])->save();
+
+        app(CurrentCompany::class)->runAs($northstar, fn () => $this->northstarPeople());
+    }
+
+    /**
+     * Structure and employees for Northstar, matching the visual design's sample data.
+     */
+    protected function northstarPeople(): void
+    {
+        $record = app(EmployeeRecord::class);
+
+        CompanySetting::query()->firstOrCreate([], ['timezone' => 'Europe/London', 'currency_code' => 'GBP', 'work_days' => [1, 2, 3, 4, 5], 'week_start_day' => 1]);
+        CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'GB'], ['is_primary' => true]);
+        CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'US'], ['is_primary' => false]);
+        CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'PK'], ['is_primary' => false]);
+
+        $london = Location::query()->firstOrCreate(['code' => 'LDN'], ['name' => 'London office', 'country_code' => 'GB', 'city' => 'London', 'timezone' => 'Europe/London']);
+        $newYork = Location::query()->firstOrCreate(['code' => 'NYC'], ['name' => 'New York office', 'country_code' => 'US', 'city' => 'New York', 'timezone' => 'America/New_York']);
+        $lahore = Location::query()->firstOrCreate(['code' => 'LHR'], ['name' => 'Lahore hub', 'country_code' => 'PK', 'city' => 'Lahore', 'timezone' => 'Asia/Karachi']);
+
+        $departments = collect(['Design', 'Engineering', 'People', 'Customer team', 'Leadership'])
+            ->mapWithKeys(fn (string $name) => [$name => Department::query()->firstOrCreate(['name' => $name])]);
+        $platform = Team::query()->firstOrCreate(['name' => 'Platform'], ['department_id' => $departments['Engineering']->id]);
+
+        // [number, first, last, title, department, location, country, status, user email, manager number]
+        $people = [
+            ['NS-000', 'Sarah', 'Ahmed', 'Managing director', 'Leadership', $london, 'GB', 'active', 'sarah@northstar.example', null],
+            ['NS-001', 'Ava', 'Thompson', 'Product designer', 'Design', $london, 'GB', 'active', 'ava@northstar.example', 'NS-002'],
+            ['NS-002', 'Noah', 'Williams', 'Engineering lead', 'Engineering', $london, 'GB', 'active', 'noah@northstar.example', 'NS-000'],
+            ['NS-003', 'Mia', 'Chen', 'People partner', 'People', $newYork, 'US', 'active', null, 'NS-000'],
+            ['NS-004', 'Oliver', 'Khan', 'Software engineer', 'Engineering', $lahore, 'PK', 'onboarding', null, 'NS-002'],
+            ['NS-005', 'Amara', 'Lewis', 'Account manager', 'Customer team', $newYork, 'US', 'on_leave', null, 'NS-000'],
+            ['NS-006', 'Helen', 'Brooks', 'HR manager', 'People', $london, 'GB', 'active', 'helen@northstar.example', 'NS-000'],
+            ['NS-007', 'Paul', 'Okafor', 'Payroll specialist', 'People', $london, 'GB', 'active', 'paul@northstar.example', 'NS-006'],
+        ];
+
+        foreach ($people as [$number, $first, $last, $title, $department, $location, $country, $status, $email, $managerNumber]) {
+            $employee = Employee::query()->firstOrNew(['employee_number' => $number]);
+
+            if ($employee->exists) {
+                continue;
+            }
+
+            $start = now()->subMonths(crc32($number) % 40 + 2)->startOfMonth()->toDateString();
+            $employee->fill([
+                'first_name' => $first, 'last_name' => $last, 'work_email' => strtolower("{$first}@northstar.example"),
+                'start_date' => $start, 'work_country' => $country, 'current_status' => $status,
+                'user_id' => $email ? User::query()->where('email', $email)->value('id') : null,
+            ])->save();
+
+            $record->changeJob($employee, ['job_title' => $title, 'department_id' => $departments[$department]->id, 'team_id' => $department === 'Engineering' ? $platform->id : null, 'employment_type' => 'full_time'], $start, 'Joined');
+            $record->changeLocation($employee, $location->id, $country === 'PK' ? 'remote' : 'hybrid', $start, 'Joined');
+            $record->changeStatus($employee, $status, $start, 'Joined');
+
+            if ($managerNumber !== null) {
+                $record->changeManager($employee, Employee::query()->where('employee_number', $managerNumber)->value('id'), $start, 'Joined');
+            }
+        }
     }
 
     protected function user(string $email, string $name, string $status = User::STATUS_ACTIVE): User
