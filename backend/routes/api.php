@@ -22,6 +22,7 @@ use App\Http\Controllers\Company\SetupChecklistController;
 use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
+use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
@@ -101,6 +102,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::put('/employees/{employee}', [EmployeeChangeController::class, 'updateDetails'])->whereUlid('employee');
         Route::post('/employees/{employee}/changes', [EmployeeChangeController::class, 'recordChange'])->whereUlid('employee');
         Route::post('/employees/{employee}/status', [EmployeeChangeController::class, 'changeStatus'])->whereUlid('employee');
+        Route::get('/employees/{employee}/documents', [EmployeeDocumentController::class, 'index'])->whereUlid('employee');
+        Route::post('/employees/{employee}/documents', [EmployeeDocumentController::class, 'store'])->whereUlid('employee')->middleware('throttle:30,1');
+        Route::get('/employees/{employee}/documents/{document}/download', [EmployeeDocumentController::class, 'download'])->whereUlid(['employee', 'document']);
+        Route::delete('/employees/{employee}/documents/{document}', [EmployeeDocumentController::class, 'destroy'])->whereUlid(['employee', 'document']);
         Route::put('/employees/{employee}/payroll-details', [EmployeeChangeController::class, 'updatePayrollDetails'])->whereUlid('employee');
         Route::get('/employees/form-options', [EmployeeController::class, 'formOptions'])->middleware('permission:employees.manage,payroll.settings.manage');
         Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.manage');

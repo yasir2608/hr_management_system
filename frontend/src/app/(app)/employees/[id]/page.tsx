@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { DocumentsPanel } from "@/components/employees/DocumentsPanel";
 import { ChangeStatusModal, EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { NoAccess } from "@/components/Guard";
 import { Badge, Banner, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
@@ -88,6 +89,7 @@ export default function EmployeeDetailPage() {
     ["overview", "Overview"],
     ...(history ? [["history", "Employment history"]] : []),
     ["payroll", "Pay & tax"],
+    ["documents", "Documents"],
   ];
 
   return (
@@ -180,6 +182,8 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       )}
+
+      {tab === "documents" && <DocumentsPanel employeeId={summary.id} />}
 
       {tab === "payroll" && (
         <div className="grid split">
