@@ -27,12 +27,13 @@ class CalculateRun
 
         $employer = PayrollSetting::query()->where('country_code', $run->country_code)->first()?->employer_details ?? [];
         $workDays = CompanySetting::current()?->work_days ?? [1, 2, 3, 4, 5];
+        $yearToDate = $this->yearToDateGross($run);
 
-        DB::transaction(function () use ($run, $employer, $workDays): void {
+        DB::transaction(function () use ($run, $employer, $workDays, $yearToDate): void {
             $totals = ['employees' => 0, 'gross_pay' => 0, 'employee_deductions' => 0, 'net_pay' => 0, 'employer_costs' => 0, 'total_cost' => 0, 'with_warnings' => 0, 'blocked' => 0];
             $versions = [];
 
-            $run->lines()->each(function (PayrollRunEmployee $line) use ($run, $employer, $workDays, &$totals, &$versions): void {
+            $run->lines()->each(function (PayrollRunEmployee $line) use ($run, $employer, $workDays, $yearToDate, &$totals, &$versions): void {
                 if (! $line->included) {
                     $line->forceFill(['results' => null])->save();
 
@@ -42,6 +43,7 @@ class CalculateRun
                 $results = $this->calculator->calculate(
                     $line->inputs ?? [], $run->country_code, $run->currency, $run->pay_frequency,
                     $run->period_start->toImmutable(), $run->period_end->toImmutable(), $run->pay_date->toImmutable(), $employer, $workDays,
+                    $yearToDate[$line->employee_id] ?? 0,
                 );
                 $line->forceFill(['results' => $results])->save();
 
@@ -72,5 +74,31 @@ class CalculateRun
         ]);
 
         return $run;
+    }
+
+    /**
+     * Each employee's gross pay (cents) from earlier calculated or approved runs in the same country and tax year.
+     *
+     * @return array<string, int>
+     */
+    private function yearToDateGross(PayrollRun $run): array
+    {
+        $yearStart = TaxYear::startFor($run->country_code, $run->period_start->toImmutable());
+
+        $earlierRuns = PayrollRun::query()
+            ->where('country_code', $run->country_code)
+            ->whereIn('status', [PayrollRun::CALCULATED, PayrollRun::IN_REVIEW, PayrollRun::APPROVED])
+            ->where('id', '!=', $run->id)
+            ->where('period_start', '>=', $yearStart->toDateString())
+            ->where('period_end', '<', $run->period_start->toDateString())
+            ->pluck('id');
+
+        $totals = [];
+        PayrollRunEmployee::query()->whereIn('payroll_run_id', $earlierRuns)->where('included', true)->whereNotNull('results')
+            ->each(function (PayrollRunEmployee $line) use (&$totals): void {
+                $totals[$line->employee_id] = ($totals[$line->employee_id] ?? 0) + Money::cents($line->results['gross_pay'] ?? 0);
+            });
+
+        return $totals;
     }
 }

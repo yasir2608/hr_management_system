@@ -26,9 +26,10 @@ class Calculator
      * @param  array<string, mixed>  $inputs  the line's inputs snapshot (see GatherInputs)
      * @param  array<string, mixed>  $employerDetails
      * @param  list<int>  $workDays  ISO weekdays the company works
+     * @param  int  $yearToDateGross  gross pay (cents) from the employee's earlier runs in the same tax year
      * @return array<string, mixed>
      */
-    public function calculate(array $inputs, string $country, string $currency, string $payFrequency, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, CarbonImmutable $payDate, array $employerDetails, array $workDays): array
+    public function calculate(array $inputs, string $country, string $currency, string $payFrequency, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, CarbonImmutable $payDate, array $employerDetails, array $workDays, int $yearToDateGross = 0): array
     {
         $lines = [];
         $warnings = [];
@@ -129,7 +130,7 @@ class Calculator
             $blocking[] = 'No '.config("countries.{$country}.name", $country).' tax rules cover this pay period, so taxes and contributions were not calculated.';
         } else {
             $rulesVersion = $rules->version();
-            $result = $rules->calculate(new PayContext($country, $currency, $payFrequency, BasePay::PERIODS_PER_YEAR[$payFrequency] ?? 12, $periodStart, $periodEnd, $payDate, $gross, $taxable, $base, $inputs['tax_details'] ?? [], $employerDetails));
+            $result = $rules->calculate(new PayContext($country, $currency, $payFrequency, BasePay::PERIODS_PER_YEAR[$payFrequency] ?? 12, $periodStart, $periodEnd, $payDate, $gross, $taxable, $base, $inputs['tax_details'] ?? [], $employerDetails, $yearToDateGross));
             foreach ($result->employee as $line) {
                 $employeeTaxes += $line['amount'];
                 $lines[] = self::line($line['code'], $line['label'], $line['category'], -$line['amount'], $line['explanation']);

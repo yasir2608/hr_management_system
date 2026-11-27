@@ -3,6 +3,8 @@
 use App\Payroll\Rules\Pakistan2025;
 use App\Payroll\Rules\UnitedKingdom2025;
 use App\Payroll\Rules\UnitedKingdom2026;
+use App\Payroll\Rules\UnitedStates2025;
+use App\Payroll\Rules\UnitedStates2026;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +30,11 @@ return [
         'GB' => [
             ['class' => UnitedKingdom2025::class, 'from' => '2025-04-06', 'to' => '2026-04-05'],
             ['class' => UnitedKingdom2026::class, 'from' => '2026-04-06', 'to' => null],
+        ],
+        // Calendar year.
+        'US' => [
+            ['class' => UnitedStates2025::class, 'from' => '2025-01-01', 'to' => '2025-12-31'],
+            ['class' => UnitedStates2026::class, 'from' => '2026-01-01', 'to' => null],
         ],
     ],
 ];

@@ -26,5 +26,7 @@ final readonly class PayContext
         public int $basePay,
         public array $taxDetails,
         public array $employerDetails,
+        /** Gross pay from the employee's earlier runs in the same tax year (for wage bases and caps). */
+        public int $yearToDateGross = 0,
     ) {}
 }
