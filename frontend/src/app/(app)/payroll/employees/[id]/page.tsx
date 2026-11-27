@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { FREQUENCY_LABELS } from "@/components/payroll/GroupForm";
+import { PayItemsPanel } from "@/components/payroll/PayItemsPanel";
 import { Guard } from "@/components/Guard";
 import { Badge, Banner, Field, PageHead, Panel, Sensitive, Table, formatDate, humanize, money } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -115,6 +116,7 @@ function PayrollProfilePage() {
           </Sensitive>
         </Panel>
       </div>
+      <PayItemsPanel employeeId={employee.id} currency={profile.schedule?.currency ?? pay?.current?.currency ?? "GBP"} />
       {pay && pay.history.length > 0 && (
         <Panel title="Pay history" subtitle="Effective-dated. Past payroll runs keep the values used at the time." bodyless>
           <Table headers={["From", "To", "Amount", "Basis", "Reason"]}>

@@ -49,6 +49,7 @@ use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
+use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
@@ -286,6 +287,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/groups/{group}', [PayrollGroupController::class, 'members'])->whereUlid('group');
             Route::get('/payroll/employees', [PayrollEmployeeController::class, 'index']);
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
+            Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
+            // Changes are checked in the controller (payroll settings and salary access).
+            Route::post('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'store'])->whereUlid('employee');
+            Route::put('/payroll/employees/{employee}/pay-items/{item}', [PayItemController::class, 'update'])->whereUlid(['employee', 'item']);
+            Route::post('/payroll/employees/{employee}/pay-items/{item}/change', [PayItemController::class, 'change'])->whereUlid(['employee', 'item']);
+            Route::post('/payroll/employees/{employee}/pay-items/{item}/end', [PayItemController::class, 'end'])->whereUlid(['employee', 'item']);
+            Route::delete('/payroll/employees/{employee}/pay-items/{item}', [PayItemController::class, 'destroy'])->whereUlid(['employee', 'item']);
         });
         Route::middleware('permission:payroll.settings.manage')->group(function (): void {
             Route::put('/payroll/settings/{country}', [PayrollSettingsController::class, 'update'])->where('country', '[A-Z]{2}');
