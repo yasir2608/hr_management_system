@@ -2,6 +2,7 @@
 
 import { Guard } from "@/components/Guard";
 import { BalancesTab } from "@/components/leave/BalancesTab";
+import { CalendarTab } from "@/components/leave/CalendarTab";
 import { LeaveTypesTab } from "@/components/leave/LeaveTypesTab";
 import { MyLeaveTab } from "@/components/leave/MyLeaveTab";
 import { RequestsTab } from "@/components/leave/RequestsTab";
@@ -15,6 +16,7 @@ type TabDef = { key: string; label: string; permissions: string[]; render: () =>
 const tabs: TabDef[] = [
   { key: "mine", label: "My leave", permissions: ["self.leave.request"], render: () => <MyLeaveTab /> },
   { key: "requests", label: "Requests", permissions: ["leave.requests.view", "leave.approve"], render: () => <RequestsTab /> },
+  { key: "calendar", label: "Calendar", permissions: ["leave.requests.view", "leave.approve", "self.leave.request"], render: () => <CalendarTab /> },
   { key: "types", label: "Leave types", permissions: ["leave.policies.manage", "leave.requests.view", "self.leave.request"], render: () => <LeaveTypesTab /> },
   { key: "balances", label: "Balances", permissions: ["leave.requests.view", "leave.balances.manage"], render: () => <BalancesTab /> },
   { key: "policies", label: "Policies", permissions: ["leave.policies.manage"], render: () => <PoliciesTab /> },

@@ -28,6 +28,7 @@ use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
 use App\Http\Controllers\Leave\LeaveBalanceController;
+use App\Http\Controllers\Leave\LeaveCalendarController;
 use App\Http\Controllers\Leave\LeavePolicyController;
 use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\Leave\LeaveTypeController;
@@ -182,6 +183,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/me/leave/requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancelMine'])->whereUlid('leaveRequest');
         });
         Route::post('/leave/days-preview', [LeaveRequestController::class, 'preview']);
+        Route::get('/leave/calendar', [LeaveCalendarController::class, 'month'])->middleware('permission:leave.requests.view,leave.approve,self.leave.request');
+        Route::get('/leave/employees/{employee}/requests', [LeaveCalendarController::class, 'history'])->whereUlid('employee');
         Route::get('/leave/requests/{leaveRequest}/context', [LeaveRequestController::class, 'context'])->whereUlid('leaveRequest');
         Route::post('/leave/requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancelFor'])->whereUlid('leaveRequest')->middleware('permission:leave.balances.manage');
         Route::get('/leave/requests', [LeaveRequestController::class, 'index'])->middleware('permission:leave.requests.view,leave.approve');

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DocumentsPanel } from "@/components/employees/DocumentsPanel";
+import { EmployeeLeavePanel } from "@/components/leave/EmployeeLeavePanel";
 import { ActivationPanel } from "@/components/onboarding/ActivationPanel";
 import { OnboardingTasksPanel } from "@/components/onboarding/OnboardingTasksPanel";
 import { UpdateRequestsPanel } from "@/components/employees/UpdateRequestsPanel";
@@ -70,7 +71,7 @@ export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [tab, setTab] = useTab(["overview", "history", "payroll", "documents", "onboarding"]);
+  const [tab, setTab] = useTab(["overview", "history", "leave", "payroll", "documents", "onboarding"]);
   const { can } = useAuth();
   const [modal, setModal] = useState<"details" | "change" | "payroll" | "status" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -94,6 +95,7 @@ export default function EmployeeDetailPage() {
   const tabs = [
     ["overview", "Overview"],
     ...(history ? [["history", "Employment history"]] : []),
+    ...(can("leave.requests.view") ? [["leave", "Leave"]] : []),
     ["payroll", "Pay & tax"],
     ["documents", "Documents"],
     ...(can("onboarding.manage") ? [["onboarding", "Onboarding"]] : []),
@@ -191,6 +193,7 @@ export default function EmployeeDetailPage() {
         </div>
       )}
 
+      {tab === "leave" && <EmployeeLeavePanel employeeId={summary.id} />}
       {tab === "documents" && <DocumentsPanel employeeId={summary.id} />}
       {tab === "onboarding" && (
         <OnboardingTasksPanel employeeId={summary.id}>
