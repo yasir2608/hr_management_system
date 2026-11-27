@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
+import { RunComparisonPanel } from "@/components/payroll/RunComparisonPanel";
 import { RunIssuesPanel, type IssueSummary } from "@/components/payroll/RunIssuesPanel";
 import { RunResults, type Results } from "@/components/payroll/RunResults";
 import { Badge, Banner, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime, humanize, money } from "@/components/ui";
@@ -134,6 +135,7 @@ function RunPage() {
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
       {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}
+      {run.totals && <RunComparisonPanel runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}
       {run.lines.some((line) => line.results) && <RunResults rows={included.filter((line) => line.results)} currency={run.currency} restricted={run.amounts_restricted} />}
       <Panel title="Gathered inputs" subtitle="A snapshot taken when the run started. Later changes do not alter it." bodyless>
         <Table headers={["Employee", "Pay in this period", "Allowances and deductions", "Other", "Review"]}>

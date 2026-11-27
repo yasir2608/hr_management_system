@@ -297,6 +297,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/runs/periods', [PayrollRunController::class, 'periods']);
             Route::get('/payroll/runs/{run}', [PayrollRunController::class, 'show'])->whereUlid('run');
             Route::get('/payroll/runs/{run}/issues', [RunIssueController::class, 'index'])->whereUlid('run');
+            Route::get('/payroll/runs/{run}/comparison', [PayrollRunController::class, 'comparison'])->whereUlid('run');
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
             Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
             Route::post('/payroll/employees/{employee}/impact-preview', ImpactPreviewController::class)->whereUlid('employee');

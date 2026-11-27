@@ -11,6 +11,7 @@ use App\Models\PayrollRunEmployee;
 use App\Payroll\CalculateRun;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
+use App\Payroll\RunComparison;
 use App\Payroll\RunIssues;
 use App\Payroll\RunSummary;
 use App\Support\Activity;
@@ -129,6 +130,14 @@ class PayrollRunController extends Controller
         ]);
 
         return $this->show($run->fresh());
+    }
+
+    /**
+     * How this run differs from the group's previous run, per employee, with reasons. Amounts need salary access.
+     */
+    public function comparison(PayrollRun $run, RunComparison $comparison): JsonResponse
+    {
+        return response()->json([...$comparison->compare($run, $this->sensitive->canSee(SensitiveData::SALARY)), 'amounts_restricted' => ! $this->sensitive->canSee(SensitiveData::SALARY)]);
     }
 
     public function cancel(Request $request, PayrollRun $run): JsonResponse
