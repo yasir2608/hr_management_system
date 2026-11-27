@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { SubscriptionPanel } from "@/components/platform/Billing";
+import { InvoicesPanel } from "@/components/platform/BillingInvoices";
 import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -124,6 +125,7 @@ export default function PlatformCompanyPage() {
         </Table>
       </Panel>
       <SubscriptionPanel companyId={company.id} />
+      <InvoicesPanel companyId={company.id} />
       <Panel title="Staff actions on this company" bodyless>
         {detail.staff_activity.length === 0 ? <EmptyState title="No staff actions yet" /> : (
           <Table headers={["When", "Who", "What"]}>

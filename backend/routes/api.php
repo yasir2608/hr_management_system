@@ -71,6 +71,7 @@ use App\Http\Controllers\Payroll\PayslipController;
 use App\Http\Controllers\Payroll\RunIssueController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\BillingController as PlatformBillingController;
+use App\Http\Controllers\Platform\BillingInvoiceController as PlatformBillingInvoiceController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
 use App\Http\Controllers\Platform\HealthController as PlatformHealthController;
@@ -111,6 +112,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::put('/billing/plans/{plan}', [PlatformBillingController::class, 'updatePlan'])->whereUlid('plan');
         Route::post('/companies/{company}/subscriptions', [PlatformBillingController::class, 'storeSubscription'])->whereUlid('company');
         Route::post('/companies/{company}/subscriptions/{subscription}/end', [PlatformBillingController::class, 'endSubscription'])->whereUlid(['company', 'subscription']);
+        Route::post('/companies/{company}/invoices', [PlatformBillingInvoiceController::class, 'store'])->whereUlid('company');
+        Route::put('/companies/{company}/invoices/{invoice}', [PlatformBillingInvoiceController::class, 'update'])->whereUlid(['company', 'invoice']);
+        Route::post('/companies/{company}/invoices/{invoice}/void', [PlatformBillingInvoiceController::class, 'void'])->whereUlid(['company', 'invoice']);
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.
@@ -125,6 +129,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/health', [PlatformHealthController::class, 'show']);
         Route::get('/billing', [PlatformBillingController::class, 'overview']);
         Route::get('/billing/plans', [PlatformBillingController::class, 'plans']);
+        Route::get('/billing/invoices', [PlatformBillingInvoiceController::class, 'index']);
+        Route::get('/companies/{company}/invoices', [PlatformBillingInvoiceController::class, 'forCompany'])->whereUlid('company');
         Route::get('/companies/{company}/subscriptions', [PlatformBillingController::class, 'subscriptions'])->whereUlid('company');
         Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
         Route::get('/support-access', [SupportAccessController::class, 'index']);

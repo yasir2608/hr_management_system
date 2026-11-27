@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PERIOD_LABELS, StateBadge, priceLabel, type Plan, type Subscription } from "@/components/platform/Billing";
-import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Stat, Table, formatDate } from "@/components/ui";
+import { InvoiceStatus, type BillingInvoice } from "@/components/platform/BillingInvoices";
+import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Stat, Table, formatDate, money } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 
 type Row = { id: string; name: string; status: string; employees: number; subscription: Subscription | null; upcoming: Subscription | null };
@@ -74,8 +75,48 @@ export default function PlatformBillingPage() {
           </Table>
         )}
       </Panel>
+      <AllInvoices />
       {editing && <PlanForm plan={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onSaved={(message) => { setEditing(null); setNotice(message); void load(); }} />}
     </>
+  );
+}
+
+const INVOICE_FILTERS = [{ key: "", label: "All" }, { key: "issued", label: "Issued" }, { key: "overdue", label: "Overdue" }, { key: "void", label: "Void" }];
+
+/** Every invoice M.Y HRMS has raised, newest first, with outstanding totals. Created on each company's page. */
+function AllInvoices() {
+  const [status, setStatus] = useState("");
+  const [data, setData] = useState<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number } } | null>(null);
+
+  useEffect(() => {
+    void api<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number } }>("/platform/billing/invoices", { noCompany: true, query: status ? { status } : undefined }).then(setData);
+  }, [status]);
+
+  if (!data) return null;
+  const outstanding = Object.entries(data.totals.outstanding).map(([currency, amount]) => money(amount, currency)).join(" · ") || money("0", "USD");
+
+  return (
+    <Panel
+      title="Invoices"
+      subtitle={`Outstanding: ${outstanding}${data.totals.overdue_count > 0 ? ` · ${data.totals.overdue_count} overdue` : ""}. Create invoices from a company's page.`}
+      right={<select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Invoice status">{INVOICE_FILTERS.map((filter) => <option key={filter.key} value={filter.key}>{filter.label}</option>)}</select>}
+      bodyless={data.data.length > 0}
+    >
+      {data.data.length === 0 ? <EmptyState icon="▤" title="No invoices here" /> : (
+        <Table headers={["Reference", "Company", "Amount", "Issued", "Due", "Status"]}>
+          {data.data.map((invoice) => (
+            <tr key={invoice.id}>
+              <td><strong>{invoice.reference}</strong></td>
+              <td><Link href={`/companies/${invoice.company_id}`}>{invoice.company}</Link></td>
+              <td>{money(invoice.amount, invoice.currency)}</td>
+              <td>{formatDate(invoice.issued_on)}</td>
+              <td>{formatDate(invoice.due_on)}</td>
+              <td><InvoiceStatus status={invoice.display_status} /></td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Panel>
   );
 }
 
