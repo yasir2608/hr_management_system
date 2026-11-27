@@ -1,5 +1,7 @@
 <?php
 
+use App\Payroll\Rules\Pakistan2025;
+
 /*
 |--------------------------------------------------------------------------
 | Country payroll rule versions
@@ -16,6 +18,9 @@
 
 return [
     'versions' => [
-        // Filled in by the country rules (chunks 8.10 to 8.12).
+        // Tax year July to June. Open-ended until the next year's figures are added; later periods get a warning.
+        'PK' => [
+            ['class' => Pakistan2025::class, 'from' => '2025-07-01', 'to' => null],
+        ],
     ],
 ];
