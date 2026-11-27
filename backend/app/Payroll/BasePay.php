@@ -41,7 +41,7 @@ class BasePay
             return 0.0;
         }
 
-        return ($start->diffInDays($end) + 1) / ($periodStart->diffInDays($periodEnd) + 1);
+        return ((int) $start->diffInDays($end) + 1) / ((int) $periodStart->diffInDays($periodEnd) + 1);
     }
 
     public static function money(float $value): string

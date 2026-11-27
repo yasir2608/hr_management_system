@@ -8,6 +8,7 @@ use App\Models\CompanySetting;
 use App\Models\PayrollGroup;
 use App\Models\PayrollRun;
 use App\Models\PayrollRunEmployee;
+use App\Payroll\CalculateRun;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
 use App\Support\Activity;
@@ -94,9 +95,17 @@ class PayrollRunController extends Controller
             'created_by' => $run->creator?->name,
             'inputs_gathered_at' => $run->inputs_gathered_at?->toIso8601String(),
             'amounts_restricted' => ! $canSeePay,
+            'totals' => $run->totals === null || $canSeePay ? $run->totals : collect($run->totals)->only(['employees', 'with_warnings', 'blocked', 'rules_versions', 'calculated_at'])->all(),
             'lines' => $run->lines()->orderByDesc('included')->orderBy('employee_name')->get()
                 ->map(fn (PayrollRunEmployee $line): array => $this->line($line, $canSeePay)),
         ]);
+    }
+
+    public function calculate(PayrollRun $run, CalculateRun $calculate): JsonResponse
+    {
+        $calculate->handle($run);
+
+        return $this->show($run->fresh());
     }
 
     public function cancel(Request $request, PayrollRun $run): JsonResponse
@@ -115,7 +124,7 @@ class PayrollRunController extends Controller
     private function summary(PayrollRun $run): array
     {
         return [
-            ...$run->only(['id', 'payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'status', 'totals']),
+            ...$run->only(['id', 'payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'status']),
             'group' => $run->group?->only(['id', 'name']),
             'period_start' => $run->period_start->toDateString(),
             'period_end' => $run->period_end->toDateString(),
@@ -145,6 +154,10 @@ class PayrollRunController extends Controller
                 'has_bank_account' => $inputs['has_bank_account'] ?? false,
                 'employment' => $inputs['employment'] ?? null,
             ],
+            // Without salary access: only whether there are warnings or blocks, never amounts.
+            'results' => $line->results === null ? null : ($canSeePay
+                ? $line->results
+                : ['warnings' => $line->results['warnings'] ?? [], 'blocking' => $line->results['blocking'] ?? [], 'rules_version' => $line->results['rules_version'] ?? null]),
         ];
     }
 }
