@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contractor_invoices', function (Blueprint $table) {
-            $table->foreignId('reviewed_by')->nullable()->after('status')->constrained('users')->nullOnDelete();
+            $table->foreignUlid('reviewed_by')->nullable()->after('status')->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable()->after('reviewed_by');
             $table->text('review_reason')->nullable()->after('reviewed_at');
         });

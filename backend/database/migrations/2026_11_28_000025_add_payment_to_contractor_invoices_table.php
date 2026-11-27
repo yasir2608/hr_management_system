@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('payment_reference', 100)->nullable()->after('paid_on');
             $table->string('payment_method', 30)->nullable()->after('payment_reference');
             $table->text('payment_note')->nullable()->after('payment_method');
-            $table->foreignId('payment_recorded_by')->nullable()->after('payment_note')->constrained('users')->nullOnDelete();
+            $table->foreignUlid('payment_recorded_by')->nullable()->after('payment_note')->constrained('users')->nullOnDelete();
         });
     }
 

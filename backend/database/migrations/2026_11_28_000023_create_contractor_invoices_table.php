@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignUlid('attachment_document_id')->nullable()->constrained('documents')->nullOnDelete();
             $table->string('status', 20)->default('received');
-            $table->foreignId('created_by')->constrained('users');
+            $table->foreignUlid('created_by')->constrained('users');
             $table->timestamps();
 
             $table->unique(['company_id', 'contractor_id', 'reference']);
