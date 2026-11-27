@@ -21,23 +21,27 @@ class BillingInvoiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $data = $request->validate(['status' => ['nullable', Rule::in(['issued', 'overdue', 'void'])], 'company_id' => ['nullable', 'ulid']]);
+        $data = $request->validate(['status' => ['nullable', Rule::in(['issued', 'overdue', 'paid', 'void'])], 'company_id' => ['nullable', 'ulid']]);
         $today = CarbonImmutable::today();
 
-        $invoices = BillingInvoice::query()->with(['company:id,name', 'creator:id,name'])
+        $invoices = BillingInvoice::query()->with(['company:id,name', 'creator:id,name', 'paymentRecorder:id,name'])
             ->when($data['company_id'] ?? null, fn ($query, string $id) => $query->where('company_id', $id))
             ->when(($data['status'] ?? null) === 'overdue', fn ($query) => $query->where('status', BillingInvoice::ISSUED)->where('due_on', '<', $today->toDateString()))
-            ->when(in_array($data['status'] ?? null, ['issued', 'void'], true), fn ($query) => $query->where('status', $data['status']))
+            ->when(in_array($data['status'] ?? null, ['issued', 'paid', 'void'], true), fn ($query) => $query->where('status', $data['status']))
             ->orderByDesc('issued_on')->orderByDesc('reference')->limit(500)->get();
 
         $open = BillingInvoice::query()->where('status', BillingInvoice::ISSUED)->get(['amount', 'currency', 'due_on']);
+        $paidThisMonth = BillingInvoice::query()->where('status', BillingInvoice::PAID)
+            ->whereBetween('paid_on', [$today->startOfMonth()->toDateString(), $today->endOfMonth()->toDateString()])->get(['amount', 'currency']);
 
         return response()->json([
             'data' => $invoices->map(fn (BillingInvoice $invoice): array => $this->present($invoice, $today))->values(),
             'totals' => [
                 'outstanding' => $open->groupBy('currency')->map(fn ($group): string => number_format((float) $group->sum('amount'), 2, '.', '')),
                 'overdue_count' => $open->filter(fn (BillingInvoice $invoice): bool => $invoice->due_on->lt($today))->count(),
+                'paid_this_month' => $paidThisMonth->groupBy('currency')->map(fn ($group): string => number_format((float) $group->sum('amount'), 2, '.', '')),
             ],
+            'payment_methods' => BillingInvoice::PAYMENT_METHODS,
             'can_manage' => auth()->user()->platform_role === 'ops',
         ]);
     }
@@ -47,9 +51,10 @@ class BillingInvoiceController extends Controller
         $today = CarbonImmutable::today();
 
         return response()->json([
-            'data' => BillingInvoice::query()->with('creator:id,name')->where('company_id', $company->id)->orderByDesc('issued_on')->orderByDesc('reference')->get()
+            'data' => BillingInvoice::query()->with(['creator:id,name', 'paymentRecorder:id,name'])->where('company_id', $company->id)->orderByDesc('issued_on')->orderByDesc('reference')->get()
                 ->map(fn (BillingInvoice $invoice): array => $this->present($invoice, $today))->values(),
             'suggestion' => $this->suggestion($company, $today),
+            'payment_methods' => BillingInvoice::PAYMENT_METHODS,
             'can_manage' => auth()->user()->platform_role === 'ops',
         ]);
     }
@@ -89,6 +94,56 @@ class BillingInvoiceController extends Controller
         ]);
 
         return response()->json($this->present($invoice->load('creator:id,name'), CarbonImmutable::today()));
+    }
+
+    /**
+     * Marks an issued invoice paid once operations have confirmed the payment arrived. The product records the
+     * payment; it never collects it. A paid invoice is locked until the payment is undone.
+     */
+    public function recordPayment(Request $request, Company $company, BillingInvoice $invoice): JsonResponse
+    {
+        abort_unless($invoice->company_id === $company->id, 404);
+        abort_unless($invoice->status === BillingInvoice::ISSUED, 422, 'Only an issued invoice can be marked paid.');
+
+        $data = $request->validate([
+            'paid_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$invoice->issued_on->toDateString()],
+            'payment_method' => ['required', Rule::in(array_keys(BillingInvoice::PAYMENT_METHODS))],
+            'payment_reference' => ['nullable', 'string', 'max:100'],
+            'payment_note' => ['nullable', 'string', 'max:500'],
+        ], [
+            'paid_on.before_or_equal' => 'The payment date cannot be in the future.',
+            'paid_on.after_or_equal' => 'The payment date cannot be before the invoice date.',
+        ]);
+
+        $invoice->forceFill([...$data, 'status' => BillingInvoice::PAID, 'payment_recorded_by' => $request->user()->id, 'payment_recorded_at' => now()])->save();
+        PlatformActivity::record('billing.invoice_paid', "Invoice {$invoice->reference} for {$company->name} marked paid on {$invoice->paid_on->toDateString()}", $company->id, properties: [
+            'invoice_id' => $invoice->id, 'amount' => $invoice->amount, 'currency' => $invoice->currency,
+            'paid_on' => $invoice->paid_on->toDateString(), 'payment_method' => $invoice->payment_method, 'payment_reference' => $invoice->payment_reference,
+        ]);
+
+        return response()->json($this->present($invoice->load(['creator:id,name', 'paymentRecorder:id,name']), CarbonImmutable::today()));
+    }
+
+    /**
+     * Puts a paid invoice back to issued, e.g. when a payment was recorded against the wrong invoice or bounced.
+     * The reason and the payment that was removed stay in the activity history.
+     */
+    public function undoPayment(Request $request, Company $company, BillingInvoice $invoice): JsonResponse
+    {
+        abort_unless($invoice->company_id === $company->id, 404);
+        abort_unless($invoice->status === BillingInvoice::PAID, 422, 'This invoice is not marked paid.');
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']], ['reason.required' => 'Say why the payment is being undone.']);
+
+        $removed = ['paid_on' => $invoice->paid_on?->toDateString(), 'payment_method' => $invoice->payment_method, 'payment_reference' => $invoice->payment_reference];
+        $invoice->forceFill([
+            'status' => BillingInvoice::ISSUED, 'paid_on' => null, 'payment_method' => null, 'payment_reference' => null,
+            'payment_note' => null, 'payment_recorded_by' => null, 'payment_recorded_at' => null,
+        ])->save();
+        PlatformActivity::record('billing.invoice_payment_undone', "Payment on invoice {$invoice->reference} for {$company->name} undone", $company->id, properties: [
+            'invoice_id' => $invoice->id, 'reason' => $data['reason'], 'removed' => $removed,
+        ]);
+
+        return response()->json($this->present($invoice->load(['creator:id,name', 'paymentRecorder:id,name']), CarbonImmutable::today()));
     }
 
     /**
@@ -190,6 +245,13 @@ class BillingInvoiceController extends Controller
             'display_status' => $invoice->displayStatus($today),
             'created_by' => $invoice->creator?->name,
             'voided_at' => $invoice->voided_at?->toIso8601String(),
+            'paid_on' => $invoice->paid_on?->toDateString(),
+            'payment_method' => $invoice->payment_method,
+            'payment_method_label' => BillingInvoice::PAYMENT_METHODS[$invoice->payment_method] ?? null,
+            'payment_reference' => $invoice->payment_reference,
+            'payment_note' => $invoice->payment_note,
+            'payment_recorded_by' => $invoice->paymentRecorder?->name,
+            'payment_recorded_at' => $invoice->payment_recorded_at?->toIso8601String(),
         ];
     }
 }

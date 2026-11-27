@@ -12,14 +12,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * An invoice M.Y HRMS raised to a customer company for its subscription. Managed in the staff console, so it does
  * not use the company scope; queries filter by company explicitly.
  */
-#[Fillable(['company_id', 'company_subscription_id', 'reference', 'period_start', 'period_end', 'amount', 'currency', 'issued_on', 'due_on', 'notes', 'status', 'void_reason', 'voided_at', 'created_by'])]
+#[Fillable(['company_id', 'company_subscription_id', 'reference', 'period_start', 'period_end', 'amount', 'currency', 'issued_on', 'due_on', 'notes', 'status', 'void_reason', 'voided_at', 'created_by', 'paid_on', 'payment_method', 'payment_reference', 'payment_note', 'payment_recorded_by', 'payment_recorded_at'])]
 class BillingInvoice extends Model
 {
     use HasUlids;
 
     public const ISSUED = 'issued';
 
+    public const PAID = 'paid';
+
     public const VOID = 'void';
+
+    /** How the customer paid, as confirmed by operations. */
+    public const PAYMENT_METHODS = [
+        'bank_transfer' => 'Bank transfer',
+        'card' => 'Card (outside the product)',
+        'cheque' => 'Cheque',
+        'cash' => 'Cash',
+        'other' => 'Other',
+    ];
 
     /**
      * @return array<string, string>
@@ -29,6 +40,7 @@ class BillingInvoice extends Model
         return [
             'amount' => 'decimal:2', 'period_start' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d',
             'issued_on' => 'date:Y-m-d', 'due_on' => 'date:Y-m-d', 'voided_at' => 'datetime',
+            'paid_on' => 'date:Y-m-d', 'payment_recorded_at' => 'datetime',
         ];
     }
 
@@ -57,7 +69,15 @@ class BillingInvoice extends Model
     }
 
     /**
-     * What the invoice shows as: issued, overdue (issued and past its due date) or void.
+     * @return BelongsTo<User, $this>
+     */
+    public function paymentRecorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'payment_recorded_by');
+    }
+
+    /**
+     * What the invoice shows as: issued, overdue (issued and past its due date), paid or void.
      */
     public function displayStatus(?CarbonImmutable $today = null): string
     {

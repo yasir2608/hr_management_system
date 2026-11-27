@@ -115,6 +115,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/companies/{company}/invoices', [PlatformBillingInvoiceController::class, 'store'])->whereUlid('company');
         Route::put('/companies/{company}/invoices/{invoice}', [PlatformBillingInvoiceController::class, 'update'])->whereUlid(['company', 'invoice']);
         Route::post('/companies/{company}/invoices/{invoice}/void', [PlatformBillingInvoiceController::class, 'void'])->whereUlid(['company', 'invoice']);
+        Route::post('/companies/{company}/invoices/{invoice}/payment', [PlatformBillingInvoiceController::class, 'recordPayment'])->whereUlid(['company', 'invoice']);
+        Route::delete('/companies/{company}/invoices/{invoice}/payment', [PlatformBillingInvoiceController::class, 'undoPayment'])->whereUlid(['company', 'invoice']);
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.

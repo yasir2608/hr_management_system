@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PERIOD_LABELS, StateBadge, priceLabel, type Plan, type Subscription } from "@/components/platform/Billing";
-import { InvoiceStatus, type BillingInvoice } from "@/components/platform/BillingInvoices";
+import { InvoiceStatus, PaymentLine, type BillingInvoice } from "@/components/platform/BillingInvoices";
 import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Stat, Table, formatDate, money } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -81,24 +81,25 @@ export default function PlatformBillingPage() {
   );
 }
 
-const INVOICE_FILTERS = [{ key: "", label: "All" }, { key: "issued", label: "Issued" }, { key: "overdue", label: "Overdue" }, { key: "void", label: "Void" }];
+const INVOICE_FILTERS = [{ key: "", label: "All" }, { key: "issued", label: "Issued" }, { key: "overdue", label: "Overdue" }, { key: "paid", label: "Paid" }, { key: "void", label: "Void" }];
 
 /** Every invoice M.Y HRMS has raised, newest first, with outstanding totals. Created on each company's page. */
 function AllInvoices() {
   const [status, setStatus] = useState("");
-  const [data, setData] = useState<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number } } | null>(null);
+  const [data, setData] = useState<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number; paid_this_month: Record<string, string> } } | null>(null);
 
   useEffect(() => {
-    void api<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number } }>("/platform/billing/invoices", { noCompany: true, query: status ? { status } : undefined }).then(setData);
+    void api<{ data: BillingInvoice[]; totals: { outstanding: Record<string, string>; overdue_count: number; paid_this_month: Record<string, string> } }>("/platform/billing/invoices", { noCompany: true, query: status ? { status } : undefined }).then(setData);
   }, [status]);
 
   if (!data) return null;
   const outstanding = Object.entries(data.totals.outstanding).map(([currency, amount]) => money(amount, currency)).join(" · ") || money("0", "USD");
+  const collected = Object.entries(data.totals.paid_this_month).map(([currency, amount]) => money(amount, currency)).join(" · ") || money("0", "USD");
 
   return (
     <Panel
       title="Invoices"
-      subtitle={`Outstanding: ${outstanding}${data.totals.overdue_count > 0 ? ` · ${data.totals.overdue_count} overdue` : ""}. Create invoices from a company's page.`}
+      subtitle={`Outstanding: ${outstanding}${data.totals.overdue_count > 0 ? ` · ${data.totals.overdue_count} overdue` : ""} · Paid this month: ${collected}. Create invoices and record payments from a company's page.`}
       right={<select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Invoice status">{INVOICE_FILTERS.map((filter) => <option key={filter.key} value={filter.key}>{filter.label}</option>)}</select>}
       bodyless={data.data.length > 0}
     >
@@ -111,7 +112,7 @@ function AllInvoices() {
               <td>{money(invoice.amount, invoice.currency)}</td>
               <td>{formatDate(invoice.issued_on)}</td>
               <td>{formatDate(invoice.due_on)}</td>
-              <td><InvoiceStatus status={invoice.display_status} /></td>
+              <td><InvoiceStatus status={invoice.display_status} /><PaymentLine invoice={invoice} /></td>
             </tr>
           ))}
         </Table>
