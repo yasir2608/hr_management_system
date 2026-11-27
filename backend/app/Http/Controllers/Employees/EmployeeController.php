@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employees;
 use App\Access\Access;
 use App\Employees\CreateEmployee;
 use App\Employees\EmployeePresenter;
+use App\Employees\EmployeeProfile;
 use App\Employees\EmployeeRules;
 use App\Employees\PayrollReadiness;
 use App\Http\Controllers\Controller;
@@ -64,6 +65,17 @@ class EmployeeController extends Controller
             // Counts respect the viewer's scope too.
             'status_counts' => $scoped()->selectRaw('current_status, count(*) as total')->groupBy('current_status')->pluck('total', 'current_status'),
         ]);
+    }
+
+    /**
+     * One employee, with only the sections the viewer may see. People outside the viewer's
+     * scope get the same "not found" as a record that does not exist.
+     */
+    public function show(Employee $employee, EmployeeProfile $profile): JsonResponse
+    {
+        abort_unless($profile->canView($employee), 404);
+
+        return response()->json($profile->build($employee));
     }
 
     /**

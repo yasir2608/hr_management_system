@@ -96,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Employees
         Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view,employees.manage');
+        Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->whereUlid('employee');
         Route::middleware('permission:employees.manage')->group(function (): void {
             Route::get('/employees/form-options', [EmployeeController::class, 'formOptions']);
             Route::post('/employees', [EmployeeController::class, 'store']);
