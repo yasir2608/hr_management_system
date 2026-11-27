@@ -5,6 +5,7 @@ namespace App\Leave;
 use App\Models\CompanyPreference;
 use App\Models\Employee;
 use App\Models\LeaveBalanceAdjustment;
+use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use Illuminate\Support\Carbon;
 
@@ -107,12 +108,20 @@ class BalanceCalculator
     }
 
     /**
-     * Days taken and waiting for approval in the leave year. Leave requests arrive in chunk 5.4.
+     * Days taken (approved) and waiting for approval that start in the leave year. Days
+     * taken as unpaid do not use the balance.
      *
      * @return array{0: float, 1: float}
      */
     protected function usage(Employee $employee, LeaveType $type, Carbon $yearStart, Carbon $yearEnd): array
     {
-        return [0.0, 0.0];
+        $requests = LeaveRequest::query()->active()
+            ->where('employee_id', $employee->id)->where('leave_type_id', $type->id)
+            ->whereBetween('start_date', [$yearStart->toDateString(), $yearEnd->toDateString()])
+            ->get(['status', 'days', 'unpaid_days']);
+
+        $sum = fn (array $statuses): float => (float) $requests->whereIn('status', $statuses)->sum(fn (LeaveRequest $request): float => $request->paidDays());
+
+        return [$sum([LeaveRequest::STATUS_APPROVED]), $sum(LeaveRequest::OPEN_STATUSES)];
     }
 }

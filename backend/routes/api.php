@@ -29,6 +29,7 @@ use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
 use App\Http\Controllers\Leave\LeaveBalanceController;
 use App\Http\Controllers\Leave\LeavePolicyController;
+use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
@@ -174,6 +175,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // Leave
         Route::get('/leave/types', [LeaveTypeController::class, 'index']);
         Route::get('/me/leave/balances', [LeaveBalanceController::class, 'mine'])->middleware('permission:self.leave.request');
+        Route::middleware('permission:self.leave.request')->group(function (): void {
+            Route::get('/me/leave/requests', [LeaveRequestController::class, 'mine']);
+            Route::post('/me/leave/requests', [LeaveRequestController::class, 'storeMine'])->middleware('throttle:20,1');
+        });
+        Route::post('/leave/days-preview', [LeaveRequestController::class, 'preview']);
+        Route::get('/leave/requests', [LeaveRequestController::class, 'index'])->middleware('permission:leave.requests.view,leave.approve');
+        Route::post('/leave/employees/{employee}/requests', [LeaveRequestController::class, 'storeFor'])->whereUlid('employee')->middleware('permission:leave.balances.manage');
         Route::get('/leave/employees/{employee}/balances', [LeaveBalanceController::class, 'forEmployee'])->whereUlid('employee');
         Route::get('/leave/balances', [LeaveBalanceController::class, 'overview'])->middleware('permission:leave.requests.view,leave.balances.manage');
         Route::post('/leave/balances/adjustments', [LeaveBalanceController::class, 'adjust'])->middleware('permission:leave.balances.manage');

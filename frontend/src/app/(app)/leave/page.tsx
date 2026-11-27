@@ -3,6 +3,8 @@
 import { Guard } from "@/components/Guard";
 import { BalancesTab } from "@/components/leave/BalancesTab";
 import { LeaveTypesTab } from "@/components/leave/LeaveTypesTab";
+import { MyLeaveTab } from "@/components/leave/MyLeaveTab";
+import { RequestsTab } from "@/components/leave/RequestsTab";
 import { PoliciesTab } from "@/components/leave/PoliciesTab";
 import { PageHead } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +13,8 @@ import { useTab } from "@/lib/useTab";
 type TabDef = { key: string; label: string; permissions: string[]; render: () => React.ReactNode };
 
 const tabs: TabDef[] = [
+  { key: "mine", label: "My leave", permissions: ["self.leave.request"], render: () => <MyLeaveTab /> },
+  { key: "requests", label: "Requests", permissions: ["leave.requests.view", "leave.approve"], render: () => <RequestsTab /> },
   { key: "types", label: "Leave types", permissions: ["leave.policies.manage", "leave.requests.view", "self.leave.request"], render: () => <LeaveTypesTab /> },
   { key: "balances", label: "Balances", permissions: ["leave.requests.view", "leave.balances.manage"], render: () => <BalancesTab /> },
   { key: "policies", label: "Policies", permissions: ["leave.policies.manage"], render: () => <PoliciesTab /> },

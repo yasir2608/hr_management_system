@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Access\Access;
 use App\Models\Employee;
+use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -29,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Short, stable names for records that documents (and later approvals) attach to.
-        Relation::morphMap(['employee' => Employee::class]);
+        Relation::morphMap(['employee' => Employee::class, 'leave_request' => LeaveRequest::class]);
 
         // A session ends after a period without use, on top of the absolute expiry.
         Sanctum::authenticateAccessTokensUsing(fn (PersonalAccessToken $token, bool $isValid): bool => $isValid
