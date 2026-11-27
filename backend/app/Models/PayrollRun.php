@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * One payroll group's pay for one pay period.
  */
-#[Fillable(['payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'period_start', 'period_end', 'pay_date', 'status', 'totals', 'rules_versions', 'inputs_gathered_at', 'recalculated_at', 'recalculation', 'created_by'])]
+#[Fillable(['payroll_group_id', 'kind', 'corrects_run_id', 'correction_reason', 'limited_to', 'country_code', 'currency', 'pay_frequency', 'period_start', 'period_end', 'pay_date', 'status', 'totals', 'rules_versions', 'inputs_gathered_at', 'recalculated_at', 'recalculation', 'created_by'])]
 class PayrollRun extends Model
 {
     use BelongsToCompany, HasUlids;
@@ -27,6 +27,15 @@ class PayrollRun extends Model
 
     public const CANCELLED = 'cancelled';
 
+    /** An approved run replaced by an approved replacement run. Kept for the record; no longer the period's pay. */
+    public const REVERSED = 'reversed';
+
+    public const KIND_REGULAR = 'regular';
+
+    public const KIND_ADJUSTMENT = 'adjustment';
+
+    public const KIND_REPLACEMENT = 'replacement';
+
     /** Statuses that still allow inputs to be gathered again or the run to be cancelled. */
     public const OPEN = [self::DRAFT, self::CALCULATED, self::IN_REVIEW];
 
@@ -37,7 +46,7 @@ class PayrollRun extends Model
     {
         return [
             'period_start' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d', 'pay_date' => 'date:Y-m-d',
-            'totals' => 'array', 'rules_versions' => 'array', 'recalculated_at' => 'datetime', 'second_reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'recalculation' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
+            'totals' => 'array', 'rules_versions' => 'array', 'recalculated_at' => 'datetime', 'second_reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'reversed_at' => 'datetime', 'limited_to' => 'array', 'recalculation' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
         ];
     }
 
@@ -79,6 +88,22 @@ class PayrollRun extends Model
     public function secondReviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'second_reviewed_by');
+    }
+
+    /**
+     * @return BelongsTo<PayrollRun, $this>
+     */
+    public function corrects(): BelongsTo
+    {
+        return $this->belongsTo(PayrollRun::class, 'corrects_run_id');
+    }
+
+    /**
+     * @return HasMany<PayrollRun, $this>
+     */
+    public function corrections(): HasMany
+    {
+        return $this->hasMany(PayrollRun::class, 'corrects_run_id');
     }
 
     public function requiresSecondReview(): bool

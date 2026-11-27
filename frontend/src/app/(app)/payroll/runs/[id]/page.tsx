@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
+import { AdjustmentPanel, CorrectionBanners, CorrectRunModal, type Correction } from "@/components/payroll/Corrections";
 import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
 import { RecalculationChanges } from "@/components/payroll/RecalculationChanges";
 import { RunComparisonPanel } from "@/components/payroll/RunComparisonPanel";
@@ -21,12 +22,12 @@ type Line = {
   inputs: { pay: PayRow[]; pay_items: Item[]; unpaid_leave_days: number; has_tax_details: boolean; has_bank_account: boolean };
   results: Results | null;
 };
-type Totals = { employees: number; gross_pay?: string; employee_deductions?: string; net_pay?: string; employer_costs?: string; total_cost?: string; with_warnings: number; blocked: number; rules_versions: string[]; calculated_at: string };
+type Totals = { employees: number; gross_pay?: string; employee_deductions?: string; net_pay?: string; employer_costs?: string; total_cost?: string; with_warnings: number; blocked: number; rules_versions: string[]; calculated_at: string; adjustment?: { gross_pay: string; net_pay: string; employer_costs: string } };
 type Run = {
   id: string; status: string; country_code: string; country_name: string; currency: string; pay_frequency: string;
   group: { id: string; name: string } | null; period_start: string; period_end: string; pay_date: string;
   employee_count: number; excluded_count: number; created_by: string | null; inputs_gathered_at: string | null;
-  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null;
+  amounts_restricted: boolean; lines: Line[]; totals: Totals | null; rules_versions: string[] | null; company_name: string | null; item_totals: ItemGroup[] | null; kind: string; correction: Correction;
   approval: { requires_second_review: boolean; prepared_by_id: string | null; second_reviewed_by: string | null; second_reviewed_at: string | null; approved_by: string | null; approved_at: string | null; note: string | null };
 };
 
@@ -36,6 +37,7 @@ function RunPage() {
   const { id } = useParams<{ id: string }>();
   const { can, user } = useAuth();
   const [approving, setApproving] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const [approvalNote, setApprovalNote] = useState("");
   const [run, setRun] = useState<Run | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -127,6 +129,7 @@ function RunPage() {
           {can("payroll.run") && (run.status === "draft" || run.status === "calculated") && <button className="btn primary" disabled={calculating} onClick={() => void calculate()}>{calculating ? "Calculating…" : run.status === "calculated" ? "Calculate again" : "Calculate"}</button>}
           {can("payroll.run") && ["draft", "calculated", "in_review"].includes(run.status) && <button className="btn" disabled={calculating} onClick={() => void refresh()}>Gather inputs again</button>}
           {run.status === "in_review" && run.approval.requires_second_review && !run.approval.second_reviewed_at && (can("payroll.run") || can("payroll.approve")) && run.approval.prepared_by_id !== user?.id && <button className="btn" onClick={() => void step("second-review", "Second review recorded.")}>Complete second review</button>}
+          {run.status === "approved" && can("payroll.run") && <button className="btn" onClick={() => setCorrecting(true)}>Correct this run</button>}
           {run.status === "in_review" && can("payroll.approve") && <button className="btn primary" disabled={!issueSummary?.can_approve || (run.approval.requires_second_review && !run.approval.second_reviewed_at)} onClick={() => setApproving(true)}>Approve run</button>}
           {can("payroll.run") && run.status === "calculated" && (issueSummary?.blocking ?? 1) === 0 && <button className="btn primary" onClick={() => void submitForReview()}>Send for review</button>}
         </>}
@@ -144,6 +147,8 @@ function RunPage() {
         </div>
       )}
       {run.status === "cancelled" && <Banner tone="error">This run was cancelled.</Banner>}
+      <CorrectionBanners kind={run.kind} status={run.status} correction={run.correction} />
+      {correcting && <CorrectRunModal runId={run.id} employees={run.lines.filter((line) => line.included)} onClose={() => setCorrecting(false)} />}
       {run.status === "approved" && <Banner tone="success">Approved by {run.approval.approved_by ?? "—"} on {run.approval.approved_at ? formatDateTime(run.approval.approved_at) : "—"}{run.approval.note && ` (“${run.approval.note}”)`}. This run is locked: its figures, inputs and tax rule versions are kept exactly as approved.</Banner>}
       {run.status === "in_review" && run.approval.requires_second_review && <Banner tone="info">{run.approval.second_reviewed_at ? `Second review completed by ${run.approval.second_reviewed_by}.` : "This payroll needs a second review by someone other than the preparer before it can be approved."}</Banner>}
       {approving && (
@@ -173,6 +178,7 @@ function RunPage() {
       )}
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
+      {run.kind === "adjustment" && run.totals?.adjustment && !run.amounts_restricted && <AdjustmentPanel lines={run.lines as never} totals={run.totals.adjustment} currency={run.currency} />}
       {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}
       {run.totals && <RecalculationChanges runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}
       {run.totals && <RunComparisonPanel runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}

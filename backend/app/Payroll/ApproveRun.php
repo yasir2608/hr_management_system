@@ -47,6 +47,14 @@ class ApproveRun
         }
 
         $run->forceFill(['status' => PayrollRun::APPROVED, 'approved_by' => $approver->id, 'approved_at' => now(), 'approval_note' => $note])->save();
+
+        // An approved replacement takes over the period: the original is reversed but kept, unchanged, for the record.
+        if ($run->kind === PayrollRun::KIND_REPLACEMENT && ($original = $run->corrects()->first()) !== null && $original->status === PayrollRun::APPROVED) {
+            $original->forceFill(['status' => PayrollRun::REVERSED, 'reversed_at' => now(), 'reversed_by' => $approver->id])->save();
+            Activity::record('payroll.run_reversed', "Payroll run for {$original->period_start->toDateString()} to {$original->period_end->toDateString()} reversed and replaced", $original, [
+                'replaced_by' => $run->id, 'reason' => $run->correction_reason,
+            ]);
+        }
         Activity::record('payroll.run_approved', "Payroll run for {$run->period_start->toDateString()} to {$run->period_end->toDateString()} approved and locked", $run, [
             'employees' => $run->totals['employees'] ?? null, 'rules_versions' => $run->rules_versions, 'note' => $note,
         ]);

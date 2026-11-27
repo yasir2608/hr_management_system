@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 type Run = {
-  id: string; status: string; country_code: string; currency: string; group: { id: string; name: string } | null;
+  id: string; status: string; kind: string; country_code: string; currency: string; group: { id: string; name: string } | null;
   period_start: string; period_end: string; pay_date: string; employee_count: number; excluded_count: number; created_at: string;
 };
 type Group = { id: string; name: string; country_code: string };
@@ -100,7 +100,7 @@ function RunsPage() {
           <Table headers={["Group", "Pay period", "Pay date", "Employees", "Status"]}>
             {runs.map((run) => (
               <tr key={run.id}>
-                <td><Link href={`/payroll/runs/${run.id}`}><strong>{run.group?.name ?? "—"}</strong></Link><div className="tiny">{run.country_code} · {run.currency}</div></td>
+                <td><Link href={`/payroll/runs/${run.id}`}><strong>{run.group?.name ?? "—"}</strong></Link>{run.kind !== "regular" && <> <Badge tone="blue" label={run.kind === "adjustment" ? "Adjustment" : "Replacement"} /></>}<div className="tiny">{run.country_code} · {run.currency}</div></td>
                 <td>{formatDate(run.period_start)} – {formatDate(run.period_end)}</td>
                 <td>{formatDate(run.pay_date)}</td>
                 <td>{run.employee_count}{run.excluded_count > 0 && <div className="tiny">{run.excluded_count} left out</div>}</td>

@@ -33,7 +33,9 @@ class CreateDraftRun
             throw ValidationException::withMessages(['period_start' => "That is not the start of a pay period for this group. The period containing it starts on {$period['start']}."]);
         }
 
-        $existing = PayrollRun::query()->where('payroll_group_id', $group->id)->where('period_start', $period['start'])->where('status', '!=', PayrollRun::CANCELLED)->first();
+        // Adjustments sit alongside the run they correct, and reversed runs have been replaced, so neither counts here.
+        $existing = PayrollRun::query()->where('payroll_group_id', $group->id)->where('period_start', $period['start'])
+            ->where('kind', '!=', PayrollRun::KIND_ADJUSTMENT)->whereNotIn('status', [PayrollRun::CANCELLED, PayrollRun::REVERSED])->first();
         if ($existing !== null) {
             throw ValidationException::withMessages(['period_start' => 'There is already a '.str_replace('_', ' ', $existing->status).' run for this group and period.']);
         }

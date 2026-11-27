@@ -16,6 +16,8 @@ class RunComparison
     {
         return PayrollRun::query()->where('payroll_group_id', $run->payroll_group_id)
             ->whereIn('status', [PayrollRun::CALCULATED, PayrollRun::IN_REVIEW, PayrollRun::APPROVED])
+            // The period's own pay: regular runs, or a replacement once approved; never adjustments.
+            ->where(fn ($query) => $query->where('kind', PayrollRun::KIND_REGULAR)->orWhere(fn ($replacement) => $replacement->where('kind', PayrollRun::KIND_REPLACEMENT)->where('status', PayrollRun::APPROVED)))
             ->where('period_end', '<', $run->period_start->toDateString())
             ->orderByDesc('period_start')->first();
     }

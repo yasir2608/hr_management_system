@@ -10,6 +10,7 @@ use App\Models\PayrollRun;
 use App\Models\PayrollRunEmployee;
 use App\Payroll\ApproveRun;
 use App\Payroll\CalculateRun;
+use App\Payroll\CreateCorrection;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
 use App\Payroll\RecalculateRun;
@@ -33,7 +34,7 @@ class PayrollRunController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $request->validate(['group_id' => ['nullable', 'ulid'], 'status' => ['nullable', Rule::in([PayrollRun::DRAFT, PayrollRun::CALCULATED, PayrollRun::IN_REVIEW, PayrollRun::APPROVED, PayrollRun::CANCELLED])]]);
+        $request->validate(['group_id' => ['nullable', 'ulid'], 'status' => ['nullable', Rule::in([PayrollRun::DRAFT, PayrollRun::CALCULATED, PayrollRun::IN_REVIEW, PayrollRun::APPROVED, PayrollRun::CANCELLED, PayrollRun::REVERSED])]]);
 
         $runs = PayrollRun::query()->with('group:id,name')
             ->withCount(['lines as employee_count', 'lines as excluded_count' => fn ($query) => $query->where('included', false)])
@@ -99,6 +100,15 @@ class PayrollRunController extends Controller
         return response()->json([
             ...$this->summary($run->loadCount(['lines as employee_count', 'lines as excluded_count' => fn ($query) => $query->where('included', false)])),
             'company_name' => app(CurrentCompany::class)->get()?->name,
+            'correction' => [
+                'reason' => $run->correction_reason,
+                'corrects' => $run->corrects?->only(['id', 'status', 'kind']),
+                'limited_to_count' => $run->limited_to === null ? null : count($run->limited_to),
+                'reversed_at' => $run->reversed_at?->toIso8601String(),
+                // Runs that correct this one (adjustments and replacements), newest first.
+                'corrected_by' => $run->corrections()->latest()->get(['id', 'kind', 'status', 'correction_reason', 'created_at'])
+                    ->map(fn (PayrollRun $correction): array => [...$correction->only(['id', 'kind', 'status', 'correction_reason']), 'created_at' => $correction->created_at?->toIso8601String()]),
+            ],
             'approval' => [
                 'requires_second_review' => $run->requiresSecondReview(),
                 'prepared_by_id' => $run->created_by,
@@ -197,6 +207,23 @@ class PayrollRunController extends Controller
         return $this->show($run->fresh());
     }
 
+    /**
+     * Correct an approved run with an adjustment (chosen employees) or a full replacement. The approved run is kept.
+     */
+    public function correct(Request $request, PayrollRun $run, CreateCorrection $create): JsonResponse
+    {
+        $data = $request->validate([
+            'method' => ['required', Rule::in(['adjust', 'replace'])],
+            'reason' => ['required', 'string', 'min:10', 'max:500'],
+            'employee_ids' => ['required_if:method,adjust', 'array'],
+            'employee_ids.*' => ['ulid'],
+        ], ['reason.min' => 'Explain what is being corrected (at least 10 characters).', 'employee_ids.required_if' => 'Choose the employees to adjust.']);
+
+        $correction = $create->handle($run, $data['method'], $data['reason'], $data['employee_ids'] ?? [], $request->user());
+
+        return response()->json(['id' => $correction->id, 'kind' => $correction->kind], 201);
+    }
+
     public function cancel(Request $request, PayrollRun $run): JsonResponse
     {
         abort_unless($run->isOpen(), 422, 'Only runs that have not been approved can be cancelled.');
@@ -213,7 +240,7 @@ class PayrollRunController extends Controller
     private function summary(PayrollRun $run): array
     {
         return [
-            ...$run->only(['id', 'payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'status', 'rules_versions']),
+            ...$run->only(['id', 'payroll_group_id', 'kind', 'corrects_run_id', 'country_code', 'currency', 'pay_frequency', 'status', 'rules_versions']),
             'group' => $run->group?->only(['id', 'name']),
             'period_start' => $run->period_start->toDateString(),
             'period_end' => $run->period_end->toDateString(),

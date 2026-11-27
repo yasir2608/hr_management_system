@@ -29,7 +29,7 @@ class GatherInputs
         $end = CarbonImmutable::parse($run->period_end);
         $unpaid = $this->unpaidLeave->forPeriod($start->toDateString(), $end->toDateString())->keyBy('employee_id');
 
-        $employees = $this->employees($group, $start);
+        $employees = $this->employees($group, $start, $run->limited_to);
 
         DB::transaction(function () use ($run, $group, $schedule, $start, $end, $unpaid, $employees): void {
             $run->lines()->whereNotIn('employee_id', $employees->pluck('id'))->delete();
@@ -57,12 +57,14 @@ class GatherInputs
 
     /**
      * Members of the group, plus anyone who left during or after the start of the period (they may need final pay).
+     * An adjustment run covers only the employees chosen for it.
      *
      * @return Collection<int, Employee>
      */
-    private function employees(PayrollGroup $group, CarbonImmutable $start): Collection
+    private function employees(PayrollGroup $group, CarbonImmutable $start, ?array $onlyIds = null): Collection
     {
         return $group->employees()
+            ->when($onlyIds !== null, fn ($query) => $query->whereIn('id', $onlyIds))
             ->with(['currentCompensation', 'compensationHistory', 'taxDetails', 'bankAccounts'])
             ->where(fn ($query) => $query->where('current_status', '!=', Employee::STATUS_ENDED)->orWhere('end_date', '>=', $start->toDateString()))
             ->orderBy('first_name')->orderBy('last_name')

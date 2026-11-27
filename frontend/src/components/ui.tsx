@@ -39,7 +39,7 @@ const badgeTones: Record<string, string> = {
   onboarding: "blue", on_leave: "blue", invited: "blue", submitted: "blue", calculated: "blue",
   pending: "amber", pending_review: "amber", needs_attention: "amber", needs_information: "amber", awaiting_approval: "amber", due_soon: "amber", warning: "amber", suspended: "amber", received: "amber", in_review: "amber",
   overdue: "red", blocked: "red", declined: "red", rejected: "red", disabled: "red", failed: "red", expired: "red", ended: "gray", removed: "gray", revoked: "gray",
-  draft: "gray", cancelled: "gray", withdrawn: "gray",
+  draft: "gray", cancelled: "gray", withdrawn: "gray", reversed: "red",
 };
 
 export function humanize(value: string) {
