@@ -20,6 +20,7 @@ use App\Http\Controllers\Company\PreferencesController;
 use App\Http\Controllers\Company\RegionalSettingsController;
 use App\Http\Controllers\Company\SetupChecklistController;
 use App\Http\Controllers\Company\SignInSettingsController;
+use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
@@ -91,6 +92,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/locations', [LocationController::class, 'index']);
             Route::get('/departments', [DepartmentController::class, 'index']);
             Route::get('/teams', [TeamController::class, 'index']);
+        });
+
+        // Employees
+        Route::middleware('permission:employees.manage')->group(function (): void {
+            Route::get('/employees/form-options', [EmployeeController::class, 'formOptions']);
+            Route::post('/employees', [EmployeeController::class, 'store']);
         });
 
         // Users with access to the company

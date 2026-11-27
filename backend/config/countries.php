@@ -26,7 +26,7 @@ return [
         'name' => 'United Kingdom',
         'currency' => 'GBP',
         'fields' => [
-            'ni_number' => ['label' => 'National Insurance number', 'required' => true, 'regex' => '/^[A-CEGHJ-PR-TW-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]$/i', 'hint' => 'e.g. QQ 12 34 56 C'],
+            'ni_number' => ['label' => 'National Insurance number', 'required' => true, 'regex' => '/^[A-CEGHJ-PR-TW-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]$/i', 'hint' => 'e.g. AB 12 34 56 C'],
             'tax_code' => ['label' => 'Tax code', 'required' => true, 'regex' => '/^(K?\d{1,4}[LMNTX]?|BR|D0|D1|NT|0T)(\s?(W1|M1|X))?$/i', 'hint' => 'e.g. 1257L'],
             'student_loan_plan' => ['label' => 'Student loan plan', 'required' => false, 'options' => ['none', 'plan_1', 'plan_2', 'plan_4', 'plan_5', 'postgraduate'], 'regex' => null, 'hint' => null],
             'pension_opt_out' => ['label' => 'Opted out of workplace pension', 'required' => false, 'options' => ['no', 'yes'], 'regex' => null, 'hint' => null],
