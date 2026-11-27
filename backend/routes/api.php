@@ -251,6 +251,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/contractors/{contractor}/invoices/{invoice}', [InvoiceController::class, 'update'])->whereUlid(['contractor', 'invoice']);
             Route::post('/contractors/{contractor}/invoices/{invoice}/status', [InvoiceController::class, 'move'])->whereUlid(['contractor', 'invoice']);
         });
+        Route::middleware('permission:contractors.invoices.approve')->group(function (): void {
+            Route::post('/contractors/{contractor}/invoices/{invoice}/review', [InvoiceController::class, 'review'])->whereUlid(['contractor', 'invoice']);
+        });
 
         // Activity history
         Route::get('/activity/integrity', ActivityIntegrityController::class)->middleware('permission:activity.view');

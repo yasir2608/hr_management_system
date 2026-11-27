@@ -21,6 +21,7 @@ export type Invoice = {
   is_overdue: boolean;
   can_edit: boolean;
   moves: string[];
+  review: { by: string | null; at: string; reason: string | null } | null;
   has_attachment: boolean;
 };
 
@@ -92,11 +93,13 @@ function InvoiceModal({ contractorId, invoice, contracts, onClose, onSaved }: { 
 }
 
 /** Invoices received from one contractor. Paid outside payroll. */
-export function InvoicesPanel({ contractorId, canManage }: { contractorId: string; canManage: boolean }) {
+export function InvoicesPanel({ contractorId, canManage, canApprove }: { contractorId: string; canManage: boolean; canApprove: boolean }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [editing, setEditing] = useState<Invoice | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<Invoice | null>(null);
+  const [reason, setReason] = useState("");
 
   const load = useCallback(() => {
     api<{ data: Invoice[] }>(`/contractors/${contractorId}/invoices`).then((result) => setInvoices(result.data));
@@ -115,6 +118,18 @@ export function InvoicesPanel({ contractorId, canManage }: { contractorId: strin
     }
   }
 
+  async function review(invoice: Invoice, decision: "approve" | "reject", note?: string) {
+    setError(null);
+    try {
+      await api(`/contractors/${contractorId}/invoices/${invoice.id}/review`, { method: "POST", body: { decision, reason: note } });
+      setRejecting(null);
+      setReason("");
+      load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not record the decision.");
+    }
+  }
+
   return (
     <Panel title="Invoices" subtitle="Contractor invoices are paid outside payroll." right={canManage && <button className="btn soft" onClick={() => setEditing("new")}>Enter invoice</button>}>
       {error && <Banner tone="error">{error}</Banner>}
@@ -125,15 +140,23 @@ export function InvoicesPanel({ contractorId, canManage }: { contractorId: strin
               <td><strong>{invoice.reference}</strong>{invoice.contract && <div className="tiny">{invoice.contract.title}</div>}{invoice.description && <div className="tiny">{invoice.description}</div>}</td>
               <td>{formatDate(invoice.issue_date)}{invoice.due_date && <div className="tiny">Due {formatDate(invoice.due_date)}</div>}</td>
               <td>{money(invoice.amount, invoice.currency)}</td>
-              <td><Badge status={invoice.display_status} label={humanize(invoice.display_status)} />{invoice.is_overdue && <div className="tiny">{humanize(invoice.status)}</div>}</td>
+              <td><Badge status={invoice.display_status} label={humanize(invoice.display_status)} />{invoice.is_overdue && <div className="tiny">{humanize(invoice.status)}</div>}{invoice.review && <div className="tiny">{humanize(invoice.status)} by {invoice.review.by ?? "someone"}{invoice.review.reason && `: ${invoice.review.reason}`}</div>}</td>
               <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                 {invoice.has_attachment && <button className="btn" onClick={() => void download(`/contractors/${contractorId}/invoices/${invoice.id}/attachment`)}>Attachment</button>}{" "}
                 {canManage && invoice.moves.map((status) => <button key={status} className="btn" onClick={() => void move(invoice, status)}>{MOVE_LABELS[status] ?? humanize(status)}</button>)}{" "}
-                {canManage && invoice.can_edit && <button className="btn" onClick={() => setEditing(invoice)}>Edit</button>}
+                {canManage && invoice.can_edit && <button className="btn" onClick={() => setEditing(invoice)}>Edit</button>}{" "}
+                {canApprove && invoice.status === "pending_review" && <><button className="btn primary" onClick={() => void review(invoice, "approve")}>Approve</button> <button className="btn danger" onClick={() => setRejecting(invoice)}>Reject</button></>}
               </td>
             </tr>
           ))}
         </Table>
+      )}
+      {rejecting && (
+        <Modal title={`Reject invoice ${rejecting.reference}`} onClose={() => setRejecting(null)} footer={<><button className="btn" onClick={() => setRejecting(null)}>Cancel</button><button className="btn danger" disabled={!reason.trim()} onClick={() => void review(rejecting, "reject", reason)}>Reject invoice</button></>}>
+          <Field label="Reason" required hint="Recorded on the invoice and in the activity log, so the contractor knows what to fix.">
+            <textarea className="input" rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
+          </Field>
+        </Modal>
       )}
       {editing && <InvoiceModal contractorId={contractorId} invoice={editing === "new" ? undefined : editing} contracts={contracts} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </Panel>

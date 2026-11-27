@@ -58,7 +58,7 @@ function ContractorPage() {
         </Panel>
       </div>
       <ContractsPanel contractorId={contractor.id} canManage={can("contractors.manage")} />
-      <InvoicesPanel contractorId={contractor.id} canManage={can("contractors.manage")} />
+      <InvoicesPanel contractorId={contractor.id} canManage={can("contractors.manage")} canApprove={can("contractors.invoices.approve")} />
       {editing && <ContractorForm contractor={contractor} fields={contractor.fields} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setNotice("Saved."); load(); }} />}
     </>
   );

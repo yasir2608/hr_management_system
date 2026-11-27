@@ -17,7 +17,7 @@ class InvoiceController extends Controller
 {
     public function index(Contractor $contractor): JsonResponse
     {
-        return response()->json(['data' => ContractorInvoice::query()->with('contract:id,title')->where('contractor_id', $contractor->id)
+        return response()->json(['data' => ContractorInvoice::query()->with(['contract:id,title', 'reviewer:id,name'])->where('contractor_id', $contractor->id)
             ->latest('issue_date')->get()->map(fn (ContractorInvoice $invoice): array => self::present($invoice))]);
     }
 
@@ -29,7 +29,7 @@ class InvoiceController extends Controller
         $request->validate(['status' => ['nullable', Rule::in([...ContractorInvoice::STATUSES, 'overdue', 'outstanding'])]]);
         $status = $request->string('status')->toString();
 
-        $invoices = ContractorInvoice::query()->with(['contract:id,title', 'contractor:id,name'])
+        $invoices = ContractorInvoice::query()->with(['contract:id,title', 'contractor:id,name', 'reviewer:id,name'])
             ->when($status === 'overdue', fn ($query) => $query->overdue())
             ->when($status === 'outstanding', fn ($query) => $query->whereIn('status', ContractorInvoice::OUTSTANDING))
             ->when(in_array($status, ContractorInvoice::STATUSES, true), fn ($query) => $query->where('status', $status))
@@ -53,11 +53,39 @@ class InvoiceController extends Controller
             : 'From '.str_replace('_', ' ', $invoice->status).' an invoice can move to: '.implode(', ', array_map(fn (string $s): string => str_replace('_', ' ', $s), $allowed)).'.']);
 
         $from = $invoice->status;
-        $invoice->forceFill(['status' => $data['status']])->save();
+        $invoice->forceFill(['status' => $data['status'], ...($from === 'rejected' ? ['reviewed_by' => null, 'reviewed_at' => null, 'review_reason' => null] : [])])->save();
 
         Activity::record('contractor.invoice_status_changed', "Invoice {$invoice->reference} moved from ".str_replace('_', ' ', $from).' to '.str_replace('_', ' ', $invoice->status), $invoice, ['from' => $from, 'to' => $invoice->status]);
 
         return response()->json(self::present($invoice->fresh('contract')));
+    }
+
+    /**
+     * Approve or reject an invoice waiting for review. A rejection always carries a reason.
+     */
+    public function review(Request $request, Contractor $contractor, ContractorInvoice $invoice): JsonResponse
+    {
+        abort_unless($invoice->contractor_id === $contractor->id, 404);
+        abort_unless($invoice->status === 'pending_review', 422, 'Only invoices pending review can be approved or rejected.');
+
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['approve', 'reject'])],
+            'reason' => ['nullable', 'required_if:decision,reject', 'string', 'max:2000'],
+        ], ['reason.required_if' => 'Give a reason so the contractor knows what to fix.']);
+
+        $approved = $data['decision'] === 'approve';
+        $invoice->forceFill([
+            'status' => $approved ? 'approved' : 'rejected', 'reviewed_by' => $request->user()->id, 'reviewed_at' => now(), 'review_reason' => $data['reason'] ?? null,
+        ])->save();
+
+        Activity::record(
+            $approved ? 'contractor.invoice_approved' : 'contractor.invoice_rejected',
+            "Invoice {$invoice->reference} from {$contractor->name} ".($approved ? 'approved' : 'rejected'),
+            $invoice,
+            ['reason' => $invoice->review_reason],
+        );
+
+        return response()->json(self::present($invoice->fresh(['contract', 'reviewer'])));
     }
 
     public function store(Request $request, Contractor $contractor): JsonResponse
@@ -109,6 +137,9 @@ class InvoiceController extends Controller
             'is_overdue' => $invoice->isOverdue(),
             'can_edit' => in_array($invoice->status, ContractorInvoice::EDITABLE, true),
             'moves' => ContractorInvoice::MANUAL_MOVES[$invoice->status] ?? [],
+            'review' => $invoice->reviewed_at === null ? null : [
+                'by' => $invoice->reviewer?->name, 'at' => $invoice->reviewed_at->toIso8601String(), 'reason' => $invoice->review_reason,
+            ],
         ];
     }
 
