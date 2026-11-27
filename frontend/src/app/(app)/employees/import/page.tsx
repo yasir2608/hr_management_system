@@ -3,26 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
-import { ImportReview, type ImportState } from "@/components/employees/ImportReview";
+import { ImportReview, Stepper, type ImportState } from "@/components/employees/ImportReview";
 import { Badge, Banner, Field, PageHead, Panel, Table } from "@/components/ui";
 import { api, ApiError, download } from "@/lib/api";
 
 type Column = { label: string; required: boolean; sensitive: boolean; help: string; example: string };
-
-const steps = ["Upload", "Check", "Review & fix", "Confirm"];
-
-function Stepper({ current }: { current: number }) {
-  return (
-    <div className="stepper">
-      {steps.map((label, index) => (
-        <div key={label} className={`step${index < current ? " done" : index === current ? " current" : ""}`}>
-          <span className="num">{index < current ? "✓" : index + 1}</span>
-          {label}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function ImportPage() {
   const [columns, setColumns] = useState<Record<string, Column>>({});

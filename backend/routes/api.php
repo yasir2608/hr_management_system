@@ -128,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/', [EmployeeImportController::class, 'store'])->middleware('throttle:20,1');
             Route::get('/{import}', [EmployeeImportController::class, 'show'])->whereUlid('import');
             Route::post('/{import}/cancel', [EmployeeImportController::class, 'cancel'])->whereUlid('import');
+            Route::post('/{import}/validate', [EmployeeImportController::class, 'revalidate'])->whereUlid('import');
         });
 
         // Users with access to the company

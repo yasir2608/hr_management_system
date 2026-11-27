@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employees;
 
 use App\Access\Access;
 use App\Employees\Import\ImportColumns;
+use App\Employees\Import\ImportValidator;
 use App\Employees\Import\SpreadsheetReader;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeImport;
@@ -44,7 +45,17 @@ class EmployeeImportController extends Controller
         }, 'employee-import-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function store(Request $request, SpreadsheetReader $reader): JsonResponse
+    /**
+     * Checks the rows again (for example after departments or locations were added).
+     */
+    public function revalidate(EmployeeImport $import, ImportValidator $validator): JsonResponse
+    {
+        abort_unless($import->isOpen(), 422, 'This import is already finished.');
+
+        return response()->json($this->present($validator->validate($import)));
+    }
+
+    public function store(Request $request, SpreadsheetReader $reader, ImportValidator $validator): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'max:5120', 'extensions:csv,txt,xlsx'],
@@ -91,6 +102,9 @@ class EmployeeImportController extends Controller
         ]);
 
         Activity::record('employee_import.uploaded', "Employee import file “{$import->original_name}” uploaded ({$import->row_count} rows)", $import);
+
+        // Step 2 runs straight away: every row is checked before anyone reviews it.
+        $validator->validate($import);
 
         $ignoredSensitive = ! $canSensitive && collect($mapping)->filter()->contains(fn (string $key) => $columns[$key]['sensitive']);
 
