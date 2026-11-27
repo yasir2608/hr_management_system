@@ -53,6 +53,7 @@ use App\Http\Controllers\Payroll\ImpactPreviewController;
 use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
+use App\Http\Controllers\Payroll\PayrollReadinessController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
@@ -287,6 +288,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/groups', [PayrollGroupController::class, 'index']);
             Route::get('/payroll/groups/{group}', [PayrollGroupController::class, 'members'])->whereUlid('group');
             Route::get('/payroll/employees', [PayrollEmployeeController::class, 'index']);
+            Route::get('/payroll/readiness', PayrollReadinessController::class);
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
             Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
             Route::post('/payroll/employees/{employee}/impact-preview', ImpactPreviewController::class)->whereUlid('employee');
