@@ -28,10 +28,11 @@ class EmployeeDirectoryTest extends TestCase
         $engineering = $this->asCompany(fn () => Department::factory()->create(['name' => 'Engineering']));
 
         $this->asCompany(function () use ($engineering): void {
-            Employee::factory()->create(['first_name' => 'Ava', 'last_name' => 'Thompson', 'current_team_id' => $this->team->id, 'work_country' => 'GB']);
-            Employee::factory()->create(['first_name' => 'Noah', 'last_name' => 'Williams', 'current_department_id' => $engineering->id, 'work_country' => 'GB']);
-            Employee::factory()->status(Employee::STATUS_ONBOARDING)->create(['first_name' => 'Oliver', 'last_name' => 'Khan', 'work_country' => 'PK']);
-            Employee::factory()->status(Employee::STATUS_ENDED)->create(['first_name' => 'Old', 'last_name' => 'Leaver']);
+            // Job titles are fixed because the directory search matches on them too.
+            Employee::factory()->create(['first_name' => 'Ava', 'last_name' => 'Thompson', 'current_job_title' => 'Designer', 'current_team_id' => $this->team->id, 'work_country' => 'GB']);
+            Employee::factory()->create(['first_name' => 'Noah', 'last_name' => 'Williams', 'current_job_title' => 'Engineer', 'current_department_id' => $engineering->id, 'work_country' => 'GB']);
+            Employee::factory()->status(Employee::STATUS_ONBOARDING)->create(['first_name' => 'Oliver', 'last_name' => 'Khan', 'current_job_title' => 'Analyst', 'work_country' => 'PK']);
+            Employee::factory()->status(Employee::STATUS_ENDED)->create(['first_name' => 'Old', 'last_name' => 'Leaver', 'current_job_title' => 'Clerk']);
         });
     }
 
