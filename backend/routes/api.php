@@ -7,6 +7,7 @@ use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
 use App\Http\Controllers\Activity\ActivityIntegrityController;
 use App\Http\Controllers\Approvals\ApprovalController;
+use App\Http\Controllers\Approvals\ApprovalInboxController;
 use App\Http\Controllers\Attendance\AttendanceExceptionController;
 use App\Http\Controllers\Attendance\AttendanceHistoryController;
 use App\Http\Controllers\Attendance\ClockController;
@@ -215,6 +216,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/me/onboarding/tasks/{task}', [EmployeeOnboardingController::class, 'submit'])->middleware('throttle:20,1');
 
         // Approvals (shared by leave, attendance, invoices and payroll)
+        Route::get('/approvals', [ApprovalInboxController::class, 'index']);
+        Route::get('/approvals/assignees', [ApprovalInboxController::class, 'assignees']);
         Route::get('/approvals/{approval}', [ApprovalController::class, 'show'])->whereUlid('approval');
         Route::post('/approvals/{approval}/decide', [ApprovalController::class, 'decide'])->whereUlid('approval');
         Route::post('/approvals/{approval}/info', [ApprovalController::class, 'provideInfo'])->whereUlid('approval');

@@ -13,8 +13,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 /**
  * Sidebar from docs/full_scope_visualization.html: two groups, Workspace and Administration, in the design's order
- * and with its icons. Design items whose screens are not built yet (Team, Approvals, Reports, Bank exports) are
- * added as their chunks are built.
+ * and with its icons. Design items whose screens are not built yet (Team, Reports) are added as their chunks are built.
  */
 export const navGroups: NavGroup[] = [
   {
@@ -39,6 +38,7 @@ export const navGroups: NavGroup[] = [
         children: [{ href: "/contractors/invoices", label: "Invoice list", icon: "▤", permissions: ["contractors.view", "contractors.manage"] }],
       },
       { href: "/leave", label: "Leave", icon: "▣", permissions: ["leave.policies.manage", "leave.requests.view", "leave.approve", "self.leave.request"] },
+      { href: "/approvals", label: "Approvals", icon: "✓" },
       {
         href: "/attendance", label: "Attendance", icon: "◷", permissions: ["self.attendance.clock", "attendance.view", "attendance.manage"],
         children: [{ href: "/attendance/clock", label: "Clock in / out", icon: "◷", permissions: ["self.attendance.clock"] }],
