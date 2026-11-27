@@ -57,6 +57,7 @@ use App\Http\Controllers\Payroll\PayrollReadinessController;
 use App\Http\Controllers\Payroll\PayrollRulesController;
 use App\Http\Controllers\Payroll\PayrollRunController;
 use App\Http\Controllers\Payroll\PayrollSettingsController;
+use App\Http\Controllers\Payroll\RunIssueController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
@@ -295,6 +296,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/payroll/runs', [PayrollRunController::class, 'index']);
             Route::get('/payroll/runs/periods', [PayrollRunController::class, 'periods']);
             Route::get('/payroll/runs/{run}', [PayrollRunController::class, 'show'])->whereUlid('run');
+            Route::get('/payroll/runs/{run}/issues', [RunIssueController::class, 'index'])->whereUlid('run');
             Route::get('/payroll/employees/{employee}', [PayrollEmployeeController::class, 'show'])->whereUlid('employee');
             Route::get('/payroll/employees/{employee}/pay-items', [PayItemController::class, 'index'])->whereUlid('employee');
             Route::post('/payroll/employees/{employee}/impact-preview', ImpactPreviewController::class)->whereUlid('employee');
@@ -317,6 +319,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/payroll/runs', [PayrollRunController::class, 'store']);
             Route::post('/payroll/runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->whereUlid('run');
             Route::post('/payroll/runs/{run}/calculate', [PayrollRunController::class, 'calculate'])->whereUlid('run');
+            Route::post('/payroll/runs/{run}/issues/review', [RunIssueController::class, 'review'])->whereUlid('run');
+            Route::post('/payroll/runs/{run}/issues/unreview', [RunIssueController::class, 'unreview'])->whereUlid('run');
         });
 
         // Activity history
