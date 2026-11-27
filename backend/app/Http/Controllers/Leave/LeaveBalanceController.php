@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Leave;
 use App\Access\Access;
 use App\Http\Controllers\Controller;
 use App\Leave\BalanceCalculator;
+use App\Models\CompanyPreference;
 use App\Models\Employee;
 use App\Models\LeaveBalanceAdjustment;
 use App\Models\LeaveType;
@@ -22,7 +23,11 @@ class LeaveBalanceController extends Controller
     {
         $employee = $this->access->employee() ?? abort(404, 'Your account is not linked to an employee record.');
 
-        return response()->json(['data' => $this->calculator->all($employee, $request->query('date'))]);
+        return response()->json([
+            'data' => $this->calculator->all($employee, $request->query('date')),
+            // What happens if a request goes over the balance, so the form can say so.
+            'insufficient_balance_rule' => CompanyPreference::current()->insufficient_balance_rule,
+        ]);
     }
 
     public function forEmployee(Request $request, Employee $employee): JsonResponse

@@ -76,9 +76,9 @@ class SubmitLeaveRequest
             throw ValidationException::withMessages(['start_date' => 'You already have leave from '.$overlap->start_date->toDateString().' to '.$overlap->end_date->toDateString().' that overlaps these dates.']);
         }
 
-        $unpaidDays = $this->checkBalance($employee, $type, $days, $start);
+        ['unpaid' => $unpaidDays, 'exception' => $exceptionDays] = $this->checkBalance($employee, $type, $days, $start);
 
-        return DB::transaction(function () use ($employee, $type, $start, $end, $startHalf, $endHalf, $days, $unpaidDays, $data, $requester, $attachment): LeaveRequest {
+        return DB::transaction(function () use ($employee, $type, $start, $end, $startHalf, $endHalf, $days, $unpaidDays, $exceptionDays, $data, $requester, $attachment): LeaveRequest {
             $request = LeaveRequest::query()->create([
                 'employee_id' => $employee->id,
                 'leave_type_id' => $type->id,
@@ -99,6 +99,11 @@ class SubmitLeaveRequest
 
             $chain = $type->approvalChain();
 
+            // Going over the balance as an exception always needs HR, even for types without approval.
+            if ($exceptionDays > 0 && ! in_array('role:hr_admin', $chain, true)) {
+                $chain[] = 'role:hr_admin';
+            }
+
             if ($chain === []) {
                 $request->forceFill(['status' => LeaveRequest::STATUS_APPROVED, 'decided_at' => now()])->save();
             } else {
@@ -107,6 +112,7 @@ class SubmitLeaveRequest
                     'dates' => $start === $end ? $start : "{$start} to {$end}",
                     'working_days' => $days,
                     'unpaid_days' => $unpaidDays > 0 ? $unpaidDays : null,
+                    'over_balance_exception' => $exceptionDays > 0 ? "{$exceptionDays} day(s) beyond the balance" : null,
                     'reason' => $data['reason'] ?? null,
                 ], $chain);
                 $request->forceFill(['approval_request_id' => $approval->id])->save();
@@ -119,24 +125,35 @@ class SubmitLeaveRequest
     }
 
     /**
-     * Returns how many of the days are unpaid. Throws when the balance is not enough and
-     * the company blocks such requests.
+     * Applies the company's rule for requests beyond the balance:
+     *
+     * - block: refuse the request
+     * - allow_unpaid: the extra days are taken as unpaid leave
+     * - exception: send it, with the shortfall flagged, to HR as an exception
+     *
+     * @return array{unpaid: float, exception: float}
      */
-    protected function checkBalance(Employee $employee, LeaveType $type, float $days, string $start): float
+    protected function checkBalance(Employee $employee, LeaveType $type, float $days, string $start): array
     {
         if (! $type->uses_balance) {
-            return 0.0;
+            return ['unpaid' => 0.0, 'exception' => 0.0];
         }
 
-        $available = $this->balances->balance($employee, $type, $start)['available'];
+        $available = max(0.0, $this->balances->balance($employee, $type, $start)['available']);
 
         if ($days <= $available) {
-            return 0.0;
+            return ['unpaid' => 0.0, 'exception' => 0.0];
         }
 
-        throw ValidationException::withMessages([
-            'end_date' => sprintf('You have %s day(s) of %s left, but asked for %s.', rtrim(rtrim(number_format($available, 1), '0'), '.'), $type->name, $days),
-        ]);
+        $shortfall = round($days - $available, 2);
+
+        return match (CompanyPreference::current()->insufficient_balance_rule) {
+            CompanyPreference::BALANCE_ALLOW_UNPAID => ['unpaid' => $shortfall, 'exception' => 0.0],
+            CompanyPreference::BALANCE_EXCEPTION => ['unpaid' => 0.0, 'exception' => $shortfall],
+            default => throw ValidationException::withMessages([
+                'end_date' => sprintf('You have %s day(s) of %s left, but asked for %s.', rtrim(rtrim(number_format($available, 1), '0'), '.'), $type->name, $days),
+            ]),
+        };
     }
 
     private function storeAttachment(Employee $employee, UploadedFile $file, User $requester, LeaveType $type): Document

@@ -30,6 +30,7 @@ export function dateRange(row: { start_date: string; end_date: string; start_hal
 
 export function MyLeaveTab() {
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [rule, setRule] = useState<"block" | "allow_unpaid" | "exception">("block");
   const [requests, setRequests] = useState<LeaveRequestRow[] | null>(null);
   const [types, setTypes] = useState<LeaveType[]>([]);
   const [form, setForm] = useState<{ leave_type_id: string; start_date: string; end_date: string; start_half: boolean; end_half: boolean; reason: string } | null>(null);
@@ -40,11 +41,12 @@ export function MyLeaveTab() {
 
   const load = useCallback(async () => {
     const [balanceResult, requestResult, typeResult] = await Promise.all([
-      api<{ data: Balance[] }>("/me/leave/balances").catch(() => ({ data: [] })),
+      api<{ data: Balance[]; insufficient_balance_rule?: string }>("/me/leave/balances").catch(() => ({ data: [] as Balance[], insufficient_balance_rule: "block" })),
       api<{ data: LeaveRequestRow[] }>("/me/leave/requests").catch(() => ({ data: [] })),
       api<{ data: LeaveType[] }>("/leave/types"),
     ]);
     setBalances(balanceResult.data);
+    setRule((balanceResult as { insufficient_balance_rule?: "block" | "allow_unpaid" | "exception" }).insufficient_balance_rule ?? "block");
     setRequests(requestResult.data);
     setTypes(typeResult.data.filter((type) => type.is_active && type.requestable_by === "all"));
   }, []);
@@ -131,7 +133,12 @@ export function MyLeaveTab() {
               </Field>
             )}
           </div>
-          {days !== null && <div className="callout blue" style={{ marginTop: 12 }}>{days} working day(s). {selected?.uses_balance ? `You have ${balances.find((balance) => balance.leave_type_id === selected.id)?.available ?? 0} day(s) available.` : ""}</div>}
+          {days !== null && (() => {
+            const available = balances.find((balance) => balance.leave_type_id === selected?.id)?.available ?? 0;
+            const over = selected?.uses_balance && days > available;
+            const overText = { block: "This is more than you have, so it cannot be sent.", allow_unpaid: `The extra -e day(s) will be unpaid.`, exception: "This is more than you have; it will go to HR as an exception." }[rule];
+            return <div className={`callout `} style={{ marginTop: 12 }}>{days} working day(s).{selected?.uses_balance && ` You have  day(s) available.`} {over && overText}</div>;
+          })()}
         </Modal>
       )}
     </>
