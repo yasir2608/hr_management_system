@@ -5,13 +5,11 @@ namespace App\Http\Controllers\Contractors;
 use App\Http\Controllers\Controller;
 use App\Models\Contractor;
 use App\Models\ContractorContract;
-use App\Models\Document;
 use App\Support\Activity;
+use App\Support\ContractorFiles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -80,11 +78,9 @@ class ContractController extends Controller
     public function download(Contractor $contractor, ContractorContract $contract): StreamedResponse
     {
         abort_unless($contract->contractor_id === $contractor->id && $contract->signedDocument !== null, 404);
-        $document = $contract->signedDocument;
-
         Activity::record('contractor.contract_downloaded', "Signed contract “{$contract->title}” downloaded", $contract);
 
-        return Storage::disk($document->disk)->download($document->path, $document->original_name);
+        return ContractorFiles::download($contract->signedDocument);
     }
 
     /**
@@ -103,18 +99,10 @@ class ContractController extends Controller
 
     private function attach(?UploadedFile $file, ContractorContract $contract, Contractor $contractor, Request $request): void
     {
-        if ($file === null) {
-            return;
+        if ($file !== null) {
+            $document = ContractorFiles::store($file, $contractor, 'contract', "Signed: {$contract->title}", $request->user());
+            $contract->forceFill(['signed_document_id' => $document->id])->save();
         }
-
-        $path = $file->storeAs("companies/{$contractor->company_id}/contractors/{$contractor->id}", Str::ulid().'.'.$file->extension(), 'local');
-        $document = $contractor->documents()->create([
-            'category' => 'contract', 'title' => "Signed: {$contract->title}", 'disk' => 'local', 'path' => $path,
-            'original_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'mime_type' => $file->getMimeType() ?? 'application/pdf',
-            'size_bytes' => $file->getSize(), 'checksum' => hash_file('sha256', $file->getRealPath()),
-            'visibility' => Document::VISIBILITY_HR, 'uploaded_by' => $request->user()->id,
-        ]);
-        $contract->forceFill(['signed_document_id' => $document->id])->save();
     }
 
     /**
@@ -133,7 +121,7 @@ class ContractController extends Controller
             'currency' => ['required', 'string', 'size:3'],
             'status' => ['required', Rule::in(ContractorContract::STATUSES)],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'signed_document' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx'],
+            'signed_document' => ContractorFiles::RULES,
         ], ['end_date.after_or_equal' => 'The end date cannot be before the start date.']);
     }
 }

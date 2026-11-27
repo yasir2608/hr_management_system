@@ -29,6 +29,7 @@ use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Contractors\ContractController;
 use App\Http\Controllers\Contractors\ContractorController;
 use App\Http\Controllers\Contractors\ContractorFieldController;
+use App\Http\Controllers\Contractors\InvoiceController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
@@ -236,6 +237,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/contractor-contracts/upcoming', [ContractController::class, 'upcoming']);
             Route::get('/contractors/{contractor}/contracts', [ContractController::class, 'index'])->whereUlid('contractor');
             Route::get('/contractors/{contractor}/contracts/{contract}/signed', [ContractController::class, 'download'])->whereUlid(['contractor', 'contract']);
+            Route::get('/contractors/{contractor}/invoices', [InvoiceController::class, 'index'])->whereUlid('contractor');
+            Route::get('/contractors/{contractor}/invoices/{invoice}/attachment', [InvoiceController::class, 'download'])->whereUlid(['contractor', 'invoice']);
         });
         Route::middleware('permission:contractors.manage')->group(function (): void {
             Route::post('/contractors', [ContractorController::class, 'store']);
@@ -243,6 +246,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::put('/contractor-fields', [ContractorFieldController::class, 'update']);
             Route::post('/contractors/{contractor}/contracts', [ContractController::class, 'store'])->whereUlid('contractor');
             Route::post('/contractors/{contractor}/contracts/{contract}', [ContractController::class, 'update'])->whereUlid(['contractor', 'contract']);
+            Route::post('/contractors/{contractor}/invoices', [InvoiceController::class, 'store'])->whereUlid('contractor');
+            Route::post('/contractors/{contractor}/invoices/{invoice}', [InvoiceController::class, 'update'])->whereUlid(['contractor', 'invoice']);
         });
 
         // Activity history
