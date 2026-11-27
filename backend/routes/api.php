@@ -23,6 +23,7 @@ use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
+use App\Http\Controllers\Employees\SelfServiceController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
@@ -95,6 +96,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/departments', [DepartmentController::class, 'index']);
             Route::get('/teams', [TeamController::class, 'index']);
         });
+
+        // Self-service
+        Route::middleware('permission:self.profile.view')->prefix('me')->group(function (): void {
+            Route::get('/profile', [SelfServiceController::class, 'show']);
+            Route::post('/update-requests', [SelfServiceController::class, 'requestUpdate'])->middleware('throttle:10,1');
+            Route::post('/update-requests/{request}/withdraw', [SelfServiceController::class, 'withdraw']);
+        });
+        Route::get('/employees/{employee}/update-requests', [SelfServiceController::class, 'index'])->whereUlid('employee');
+        Route::post('/update-requests/{request}/review', [SelfServiceController::class, 'review'])->middleware('permission:employees.manage');
 
         // Employees
         Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view,employees.manage');

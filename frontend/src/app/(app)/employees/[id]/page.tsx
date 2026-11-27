@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DocumentsPanel } from "@/components/employees/DocumentsPanel";
+import { UpdateRequestsPanel } from "@/components/employees/UpdateRequestsPanel";
 import { ChangeStatusModal, EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { NoAccess } from "@/components/Guard";
 import { Badge, Banner, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
@@ -113,6 +114,7 @@ export default function EmployeeDetailPage() {
         </div>
       </div>
       {notice && <Banner tone="success">{notice}</Banner>}
+      {profile.can_edit && <UpdateRequestsPanel employeeId={summary.id} onReviewed={load} />}
       {modal === "details" && <EditDetailsModal employee={summary} personal={personal ?? undefined} onClose={() => setModal(null)} onDone={done} />}
       {modal === "change" && <RecordChangeModal employee={summary} canChangePay={profile.can_edit_payroll} onClose={() => setModal(null)} onDone={done} />}
       {modal === "status" && <ChangeStatusModal employee={summary} nextStatuses={profile.next_statuses} onClose={() => setModal(null)} onDone={done} />}
