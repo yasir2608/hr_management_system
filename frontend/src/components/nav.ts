@@ -23,7 +23,10 @@ export const navGroups: NavGroup[] = [
       { href: "/dashboard", label: "Dashboard", icon: "⌂" },
       {
         href: "/me", label: "My HR", icon: "♡", permissions: ["self.profile.view"],
-        children: [{ href: "/me/onboarding", label: "My onboarding", icon: "✓", permissions: ["self.profile.view"] }],
+        children: [
+          { href: "/me/payslips", label: "My payslips", icon: "▧", permissions: ["self.payslips.view"] },
+          { href: "/me/onboarding", label: "My onboarding", icon: "✓", permissions: ["self.profile.view"] },
+        ],
       },
       {
         href: "/employees", label: "Employees", icon: "♙", permissions: ["employees.view", "employees.manage"],

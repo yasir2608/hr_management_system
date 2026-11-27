@@ -51,6 +51,7 @@ use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Payroll\ImpactPreviewController;
+use App\Http\Controllers\Payroll\MyPayslipController;
 use App\Http\Controllers\Payroll\PayItemController;
 use App\Http\Controllers\Payroll\PayrollEmployeeController;
 use App\Http\Controllers\Payroll\PayrollGroupController;
@@ -292,6 +293,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         });
 
         // Payroll
+        Route::middleware('permission:self.payslips.view')->group(function (): void {
+            Route::get('/me/payslips', [MyPayslipController::class, 'index']);
+            Route::get('/me/payslips/{payslip}', [MyPayslipController::class, 'show'])->whereUlid('payslip');
+        });
         Route::middleware('permission:payslips.manage,payroll.view')->group(function (): void {
             Route::get('/payroll/payslips', [PayslipController::class, 'index']);
             Route::get('/payroll/payslips/{payslip}', [PayslipController::class, 'show'])->whereUlid('payslip');

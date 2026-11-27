@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Banner, Panel, Stat, formatDate, humanize } from "@/components/ui";
+import { Badge, Banner, Panel, Stat, formatDate, humanize, money } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { signed, type PayslipSummary } from "@/components/payroll/Payslip";
 
 type Data = {
   employee: { id: string; name: string; job_title: string | null; work_country: string | null; status: string };
   leave: { leave_type_id: string; leave_type: string; available: number; taken: number; pending: number; entitlement: number }[] | null;
   attendance: { enabled: boolean; clocked_in: boolean; open_shift: { clock_in_local?: string } | null; minutes_today: number } | null;
   next_payday: string | null;
-  latest_payslip: null;
+  latest_payslip: PayslipSummary | null;
   requests: { id: string; leave_type: string | null; status: string; start_date: string; end_date: string; days: number }[];
   profile: { percent: number; missing: string[] };
 };
@@ -65,7 +66,11 @@ export function EmployeeDashboard() {
           )}
         </div>
         <Stat label="Next payday" icon="＄" value={data.next_payday ? formatDate(data.next_payday) : "—"} note={data.next_payday ? "Company pay schedule" : "Not set up yet"} />
-        <Stat label="Latest payslip" icon="▤" value="—" note="Payslips appear here once payroll is approved" />
+        <Stat
+          label="Latest payslip" icon="▤"
+          value={data.latest_payslip ? (data.latest_payslip.kind === "adjustment" ? signed(data.latest_payslip.net_difference ?? "0", data.latest_payslip.currency) : money(data.latest_payslip.net_pay ?? "0", data.latest_payslip.currency)) : "—"}
+          note={data.latest_payslip ? <Link className="link" href={`/me/payslips/${data.latest_payslip.id}`}>Paid {formatDate(data.latest_payslip.pay_date)} · view payslip</Link> : "Payslips appear here once payroll is approved"}
+        />
       </div>
       <div className="grid two">
         <Panel title="My requests" right={data.leave && <Link className="btn primary" href="/leave">＋ Request leave</Link>}>

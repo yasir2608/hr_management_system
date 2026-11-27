@@ -9,6 +9,7 @@ use App\Leave\BalanceCalculator;
 use App\Models\CompanySetting;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
+use App\Models\Payslip;
 use App\Payroll\PayCalendar;
 use Carbon\CarbonImmutable;
 use Throwable;
@@ -49,7 +50,9 @@ class EmployeeDashboard
             'leave' => $this->access->can('self.leave.request') ? array_map(fn (array $balance): array => collect($balance)->only(['leave_type_id', 'leave_type', 'available', 'taken', 'pending', 'entitlement'])->all(), $this->balances->all($me)) : null,
             'attendance' => $this->attendance($me),
             'next_payday' => $this->nextPayday($me, $today),
-            'latest_payslip' => null, // Payslips arrive with chunks 8.19 and 8.20.
+            'latest_payslip' => $this->access->can('self.payslips.view')
+                ? Payslip::query()->where('employee_id', $me->id)->where('status', Payslip::ISSUED)->orderByDesc('pay_date')->orderByDesc('issued_at')->first()?->summary()
+                : null,
             'requests' => LeaveRequest::query()->with('leaveType:id,name')->where('employee_id', $me->id)
                 ->whereIn('status', [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_INFO_REQUESTED, LeaveRequest::STATUS_APPROVED, LeaveRequest::STATUS_DECLINED])
                 ->where('end_date', '>=', $today->subDays(30)->toDateString())
