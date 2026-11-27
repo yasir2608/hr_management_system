@@ -12,6 +12,7 @@ export const platformNav = [
   { href: "/companies", label: "Customer companies", icon: "▣" },
   { href: "/users", label: "Customer users", icon: "◎" },
   { href: "/support", label: "Support access", icon: "⚑" },
+  { href: "/billing", label: "Billing", icon: "＄" },
   { href: "/activity", label: "Platform activity", icon: "≡" },
   { href: "/health", label: "System health", icon: "♥" },
 ];

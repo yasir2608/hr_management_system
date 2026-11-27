@@ -14,7 +14,7 @@ export const ADMIN_URL = (process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://admin.loc
 export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 /** Staff console pages, served at these paths on the admin address (they live under app/platform). */
-export const STAFF_PATHS = ["/overview", "/companies", "/users", "/support", "/activity", "/health"];
+export const STAFF_PATHS = ["/overview", "/companies", "/users", "/support", "/activity", "/health", "/billing"];
 
 /** Company sign-up and joining pages that only make sense on the company address. */
 export const COMPANY_ONLY_PATHS = ["/register", "/accept-invitation", "/select-company"];

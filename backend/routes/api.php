@@ -70,6 +70,7 @@ use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Payroll\PayslipController;
 use App\Http\Controllers\Payroll\RunIssueController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
+use App\Http\Controllers\Platform\BillingController as PlatformBillingController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
 use App\Http\Controllers\Platform\HealthController as PlatformHealthController;
@@ -106,6 +107,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/users/{user}/mfa-reset', [PlatformUserController::class, 'resetMfa'])->whereUlid('user');
         Route::post('/users/{user}/lock', [PlatformUserController::class, 'lock'])->whereUlid('user');
         Route::post('/users/{user}/unlock', [PlatformUserController::class, 'unlock'])->whereUlid('user');
+        Route::post('/billing/plans', [PlatformBillingController::class, 'storePlan']);
+        Route::put('/billing/plans/{plan}', [PlatformBillingController::class, 'updatePlan'])->whereUlid('plan');
+        Route::post('/companies/{company}/subscriptions', [PlatformBillingController::class, 'storeSubscription'])->whereUlid('company');
+        Route::post('/companies/{company}/subscriptions/{subscription}/end', [PlatformBillingController::class, 'endSubscription'])->whereUlid(['company', 'subscription']);
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.
@@ -118,6 +123,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/activity', [PlatformActivityController::class, 'index']);
         Route::get('/activity/export', [PlatformActivityController::class, 'export']);
         Route::get('/health', [PlatformHealthController::class, 'show']);
+        Route::get('/billing', [PlatformBillingController::class, 'overview']);
+        Route::get('/billing/plans', [PlatformBillingController::class, 'plans']);
+        Route::get('/companies/{company}/subscriptions', [PlatformBillingController::class, 'subscriptions'])->whereUlid('company');
         Route::get('/companies/directory', [PlatformCompanyController::class, 'index']);
         Route::get('/support-access', [SupportAccessController::class, 'index']);
         Route::post('/support-access', [SupportAccessController::class, 'store'])->middleware('throttle:20,1');
