@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * One payroll group's pay for one pay period.
  */
-#[Fillable(['payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'period_start', 'period_end', 'pay_date', 'status', 'totals', 'rules_versions', 'inputs_gathered_at', 'created_by'])]
+#[Fillable(['payroll_group_id', 'country_code', 'currency', 'pay_frequency', 'period_start', 'period_end', 'pay_date', 'status', 'totals', 'rules_versions', 'inputs_gathered_at', 'recalculated_at', 'recalculation', 'created_by'])]
 class PayrollRun extends Model
 {
     use BelongsToCompany, HasUlids;
@@ -37,7 +37,7 @@ class PayrollRun extends Model
     {
         return [
             'period_start' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d', 'pay_date' => 'date:Y-m-d',
-            'totals' => 'array', 'rules_versions' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
+            'totals' => 'array', 'rules_versions' => 'array', 'recalculated_at' => 'datetime', 'recalculation' => 'array', 'inputs_gathered_at' => 'datetime', 'cancelled_at' => 'datetime',
         ];
     }
 

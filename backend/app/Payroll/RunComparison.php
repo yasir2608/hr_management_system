@@ -64,7 +64,7 @@ class RunComparison
         $grossBefore = Money::cents($old?->results['gross_pay'] ?? 0);
         $net = Money::cents($line?->results['net_pay'] ?? 0);
         $netBefore = Money::cents($old?->results['net_pay'] ?? 0);
-        $items = $this->itemChanges($line?->results['lines'] ?? [], $old?->results['lines'] ?? []);
+        $items = self::itemChanges($line?->results['lines'] ?? [], $old?->results['lines'] ?? []);
         $changed = $presence !== 'both' || $gross !== $grossBefore || $net !== $netBefore || $items !== [];
 
         if ($presence === 'both' && $changed && $reasons === []) {
@@ -90,7 +90,7 @@ class RunComparison
      * @param  list<array<string, mixed>>  $then
      * @return list<array{label: string, category: string, before: ?string, after: ?string, difference: ?string}>
      */
-    private function itemChanges(array $now, array $then): array
+    public static function itemChanges(array $now, array $then): array
     {
         $sum = function (array $lines): array {
             $totals = [];

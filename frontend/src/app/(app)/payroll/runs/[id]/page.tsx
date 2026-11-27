@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Guard } from "@/components/Guard";
 import { ItemTotals, type ItemGroup } from "@/components/payroll/ItemTotals";
+import { RecalculationChanges } from "@/components/payroll/RecalculationChanges";
 import { RunComparisonPanel } from "@/components/payroll/RunComparisonPanel";
 import { RunIssuesPanel, type IssueSummary } from "@/components/payroll/RunIssuesPanel";
 import { RunResults, type Results } from "@/components/payroll/RunResults";
@@ -62,6 +63,19 @@ function RunPage() {
     }
   }
 
+  async function refresh() {
+    setError(null);
+    setCalculating(true);
+    try {
+      setRun(await api<Run>(`/payroll/runs/${id}/refresh`, { method: "POST" }));
+      setNotice("Inputs gathered again from current pay, tax and leave data, and recalculated. See what changed below.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not refresh.");
+    } finally {
+      setCalculating(false);
+    }
+  }
+
   async function submitForReview() {
     setError(null);
     try {
@@ -97,6 +111,7 @@ function RunPage() {
           <Link className="btn" href="/payroll/runs">All runs</Link>
           {can("payroll.run") && run.status !== "approved" && run.status !== "cancelled" && <button className="btn danger" onClick={() => void cancel()}>Cancel run</button>}
           {can("payroll.run") && (run.status === "draft" || run.status === "calculated") && <button className="btn primary" disabled={calculating} onClick={() => void calculate()}>{calculating ? "Calculating…" : run.status === "calculated" ? "Calculate again" : "Calculate"}</button>}
+          {can("payroll.run") && ["draft", "calculated", "in_review"].includes(run.status) && <button className="btn" disabled={calculating} onClick={() => void refresh()}>Gather inputs again</button>}
           {can("payroll.run") && run.status === "calculated" && (issueSummary?.blocking ?? 1) === 0 && <button className="btn primary" onClick={() => void submitForReview()}>Send for review</button>}
         </>}
       />
@@ -135,6 +150,7 @@ function RunPage() {
       {issueSummary?.can_approve && <Banner tone="success">No blocking issues and every warning has been reviewed: this run is ready for approval.</Banner>}
       <RunIssuesPanel runId={run.id} version={run.totals?.calculated_at ?? run.inputs_gathered_at ?? ""} canReview={can("payroll.run") && run.status !== "approved" && run.status !== "cancelled"} onChange={setIssueSummary} />
       {run.item_totals && run.item_totals.length > 0 && <ItemTotals groups={run.item_totals} currency={run.currency} />}
+      {run.totals && <RecalculationChanges runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}
       {run.totals && <RunComparisonPanel runId={run.id} version={run.totals.calculated_at} currency={run.currency} />}
       {run.lines.some((line) => line.results) && <RunResults rows={included.filter((line) => line.results)} currency={run.currency} restricted={run.amounts_restricted} />}
       <Panel title="Gathered inputs" subtitle="A snapshot taken when the run started. Later changes do not alter it." bodyless>

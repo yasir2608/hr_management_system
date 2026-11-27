@@ -11,6 +11,7 @@ use App\Models\PayrollRunEmployee;
 use App\Payroll\CalculateRun;
 use App\Payroll\CreateDraftRun;
 use App\Payroll\PayCalendar;
+use App\Payroll\RecalculateRun;
 use App\Payroll\RunComparison;
 use App\Payroll\RunIssues;
 use App\Payroll\RunSummary;
@@ -107,11 +108,42 @@ class PayrollRunController extends Controller
         ]);
     }
 
-    public function calculate(PayrollRun $run, CalculateRun $calculate): JsonResponse
+    /**
+     * First calculation, or calculating again from the same inputs (keeping the previous result to compare).
+     */
+    public function calculate(PayrollRun $run, CalculateRun $calculate, RecalculateRun $recalculate): JsonResponse
     {
-        $calculate->handle($run);
+        $run->totals === null ? $calculate->handle($run) : $recalculate->handle($run, gatherAgain: false);
 
         return $this->show($run->fresh());
+    }
+
+    /**
+     * Gathers inputs again from the current pay, tax and leave data, then recalculates. Used after fixing source data.
+     */
+    public function refresh(PayrollRun $run, RecalculateRun $recalculate): JsonResponse
+    {
+        $recalculate->handle($run, gatherAgain: true);
+
+        return $this->show($run->fresh());
+    }
+
+    /**
+     * What changed in the latest recalculation. Amounts need salary access.
+     */
+    public function changes(PayrollRun $run, RecalculateRun $recalculate): JsonResponse
+    {
+        $canSee = $this->sensitive->canSee(SensitiveData::SALARY);
+        $rows = array_map(fn (array $row): array => $canSee ? $row : [...$row, 'gross' => null, 'net' => null, 'items' => array_map(fn (array $item): array => [...$item, 'before' => null, 'after' => null, 'difference' => null], $row['items'])], $recalculate->changes($run));
+
+        return response()->json([
+            'recalculated_at' => $run->recalculated_at?->toIso8601String(),
+            'gathered_again' => $run->recalculation['gathered_again'] ?? false,
+            'previous_totals' => $canSee ? ($run->recalculation['previous_totals'] ?? null) : null,
+            'amounts_restricted' => ! $canSee,
+            'employees' => array_values(array_filter($rows, fn (array $row): bool => $row['change'] !== 'unchanged')),
+            'unchanged' => count(array_filter($rows, fn (array $row): bool => $row['change'] === 'unchanged')),
+        ]);
     }
 
     /**
