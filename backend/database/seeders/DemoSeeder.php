@@ -87,6 +87,7 @@ class DemoSeeder extends Seeder
         $record = app(EmployeeRecord::class);
 
         CompanySetting::query()->firstOrCreate([], ['timezone' => 'Europe/London', 'currency_code' => 'GBP', 'work_days' => [1, 2, 3, 4, 5], 'week_start_day' => 1]);
+        CompanyPreference::query()->firstOrCreate([], ['attendance_enabled' => true, 'confirmed_at' => now()]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'GB'], ['is_primary' => true]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'US'], ['is_primary' => false]);
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'PK'], ['is_primary' => false]);

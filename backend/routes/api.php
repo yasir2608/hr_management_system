@@ -7,6 +7,7 @@ use App\Http\Controllers\Access\UserAccessController;
 use App\Http\Controllers\Access\UserController;
 use App\Http\Controllers\Activity\ActivityIntegrityController;
 use App\Http\Controllers\Approvals\ApprovalController;
+use App\Http\Controllers\Attendance\ClockController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
@@ -202,6 +203,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/policies', [LeavePolicyController::class, 'store']);
             Route::post('/policies/{policy}/versions', [LeavePolicyController::class, 'newVersion']);
             Route::get('/policies/preview', [LeavePolicyController::class, 'preview']);
+        });
+
+        // Attendance
+        Route::middleware('permission:self.attendance.clock')->prefix('me/clock')->group(function (): void {
+            Route::get('/', [ClockController::class, 'show']);
+            Route::post('/in', [ClockController::class, 'in'])->middleware('throttle:20,1');
+            Route::post('/out', [ClockController::class, 'out'])->middleware('throttle:20,1');
         });
 
         // Activity history
