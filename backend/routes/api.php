@@ -1,5 +1,6 @@
 <?php
 
+use App\Dashboards\HrReports;
 use App\Http\Controllers\Access\CompanySupportAccessController;
 use App\Http\Controllers\Access\InvitationController;
 use App\Http\Controllers\Access\RoleController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\Platform\HealthController as PlatformHealthController;
 use App\Http\Controllers\Platform\OverviewController as PlatformOverviewController;
 use App\Http\Controllers\Platform\SupportAccessController;
 use App\Http\Controllers\Platform\UserController as PlatformUserController;
+use App\Http\Controllers\Reports\HrReportController;
 use App\Http\Controllers\SearchController;
 use App\Payroll\Reports\PayrollReports;
 use Illuminate\Support\Facades\Route;
@@ -216,6 +218,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/me/onboarding/tasks/{task}', [EmployeeOnboardingController::class, 'submit'])->middleware('throttle:20,1');
 
         // Approvals (shared by leave, attendance, invoices and payroll)
+        // HR reports
+        Route::middleware('permission:reports.hr.view')->group(function (): void {
+            Route::get('/reports/hr', [HrReportController::class, 'options']);
+            Route::get('/reports/hr/{type}', [HrReportController::class, 'show'])->whereIn('type', array_keys(HrReports::TYPES));
+        });
+
         Route::get('/approvals', [ApprovalInboxController::class, 'index']);
         Route::get('/approvals/assignees', [ApprovalInboxController::class, 'assignees']);
         Route::get('/approvals/{approval}', [ApprovalController::class, 'show'])->whereUlid('approval');

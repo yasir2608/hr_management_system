@@ -13,7 +13,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 /**
  * Sidebar from docs/full_scope_visualization.html: two groups, Workspace and Administration, in the design's order
- * and with its icons. Design items whose screens are not built yet (Team, Reports) are added as their chunks are built.
+ * and with its icons. Design items whose screens are not built yet (Team) are added as their chunks are built.
  */
 export const navGroups: NavGroup[] = [
   {
@@ -57,6 +57,7 @@ export const navGroups: NavGroup[] = [
           { href: "/payroll/bank-formats", label: "Bank formats", icon: "⇄", permissions: ["payroll.view", "payroll.settings.manage", "payroll.export"] },
         ],
       },
+      { href: "/reports", label: "Reports", icon: "▤", permissions: ["reports.hr.view"] },
     ],
   },
   {
