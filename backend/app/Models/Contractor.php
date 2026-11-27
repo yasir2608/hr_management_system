@@ -30,6 +30,22 @@ class Contractor extends Model
     }
 
     /**
+     * @return HasMany<ContractorContract, $this>
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(ContractorContract::class);
+    }
+
+    /**
+     * @return HasMany<ContractorInvoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(ContractorInvoice::class);
+    }
+
+    /**
      * @return HasMany<ContractorContact, $this>
      */
     public function contacts(): HasMany

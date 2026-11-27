@@ -29,6 +29,7 @@ use App\Http\Controllers\Company\SignInSettingsController;
 use App\Http\Controllers\Contractors\ContractController;
 use App\Http\Controllers\Contractors\ContractorController;
 use App\Http\Controllers\Contractors\ContractorFieldController;
+use App\Http\Controllers\Contractors\ContractorReportController;
 use App\Http\Controllers\Contractors\InvoiceController;
 use App\Http\Controllers\Employees\EmployeeChangeController;
 use App\Http\Controllers\Employees\EmployeeController;
@@ -236,6 +237,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])->whereUlid('contractor');
             Route::get('/contractor-contracts/upcoming', [ContractController::class, 'upcoming']);
             Route::get('/contractor-invoices', [InvoiceController::class, 'all']);
+            Route::get('/contractor-invoices/export', [ContractorReportController::class, 'invoices']);
+            Route::get('/contractors/export', [ContractorReportController::class, 'contractors']);
             Route::get('/contractors/{contractor}/contracts', [ContractController::class, 'index'])->whereUlid('contractor');
             Route::get('/contractors/{contractor}/contracts/{contract}/signed', [ContractController::class, 'download'])->whereUlid(['contractor', 'contract']);
             Route::get('/contractors/{contractor}/invoices', [InvoiceController::class, 'index'])->whereUlid('contractor');

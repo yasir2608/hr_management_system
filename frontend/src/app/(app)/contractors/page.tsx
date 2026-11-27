@@ -7,7 +7,7 @@ import { ContractAlerts } from "@/components/contractors/ContractAlerts";
 import { FieldsModal } from "@/components/contractors/FieldsModal";
 import { Guard } from "@/components/Guard";
 import { Badge, Banner, EmptyState, PageHead, Panel, Person, Table } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { countryName } from "@/lib/countries";
 
@@ -38,7 +38,7 @@ function ContractorsPage() {
         eyebrow="Contractors"
         title="Contracts & invoices"
         subtitle="Track contractor agreements and invoices separately from employee payroll. Contractors are never paid through payroll."
-        actions={canManage && <><button className="btn" onClick={() => setEditingFields(true)}>Fields</button><button className="btn primary" onClick={() => setAdding(true)}>Add contractor</button></>}
+        actions={<><button className="btn" onClick={() => void download("/contractors/export", { status: filters.status })}>Export CSV</button>{canManage && <><button className="btn" onClick={() => setEditingFields(true)}>Fields</button><button className="btn primary" onClick={() => setAdding(true)}>Add contractor</button></>}</>}
       />
       {notice && <Banner tone="success">{notice}</Banner>}
       <ContractAlerts />
@@ -63,13 +63,14 @@ function ContractorsPage() {
         {contractors && contractors.length === 0 ? (
           <EmptyState icon="◇" title="No contractors yet" action={canManage && <button className="btn primary" onClick={() => setAdding(true)}>Add contractor</button>} />
         ) : (
-          <Table headers={["Contractor", "Type", "Country", "Owner", "Status"]}>
+          <Table headers={["Contractor", "Type", "Country", "Owner", "Payroll", "Status"]}>
             {contractors?.map((contractor) => (
               <tr key={contractor.id}>
                 <td><Link href={`/contractors/${contractor.id}`} style={{ textDecoration: "none" }}><Person name={contractor.name} detail={contractor.email} /></Link></td>
                 <td>{contractor.kind === "supplier" ? "Supplier" : "Individual"}</td>
                 <td>{countryName(contractor.country_code)}</td>
                 <td>{contractor.owner?.name ?? "—"}</td>
+                <td><Badge tone="gray" label="Not on payroll" /></td>
                 <td><Badge status={contractor.status} /></td>
               </tr>
             ))}

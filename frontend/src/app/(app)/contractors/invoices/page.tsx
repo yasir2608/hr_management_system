@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { Invoice } from "@/components/contractors/InvoicesPanel";
 import { Guard } from "@/components/Guard";
 import { Badge, EmptyState, PageHead, Panel, Table, formatDate, humanize, money } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, download } from "@/lib/api";
 
 type Row = Invoice & { contractor: { id: string; name: string } };
 
@@ -38,7 +38,8 @@ function InvoicesPage() {
 
   return (
     <>
-      <PageHead eyebrow="Contractors" title="Contractor invoices" subtitle="Every contractor invoice in one place. Contractor invoices are paid outside payroll." actions={<Link className="btn" href="/contractors">Contractors</Link>} />
+      <PageHead eyebrow="Contractors" title="Contractor invoices" subtitle="Every contractor invoice in one place. Contractor invoices are paid outside payroll." actions={<><button className="btn" onClick={() => void download("/contractor-invoices/export", { status })}>Export CSV</button><Link className="btn" href="/contractors">Contractors</Link></>} />
+      <div className="callout">Contractors are not employees and are not paid through payroll. Approved invoices are paid outside the system and the payment is recorded here.</div>
       <div className="tabs" role="tablist">
         {FILTERS.map((filter) => (
           <button key={filter.key} role="tab" aria-selected={status === filter.key} className={`tab${status === filter.key ? " on" : ""}`} onClick={() => setStatus(filter.key)}>
