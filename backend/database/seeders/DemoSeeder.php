@@ -11,6 +11,7 @@ use App\Models\CompanySetting;
 use App\Models\CompanyUser;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\LeavePolicy;
 use App\Models\LeaveType;
 use App\Models\Location;
 use App\Models\Role;
@@ -20,6 +21,7 @@ use App\Onboarding\DefaultTemplate;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Demo workspace. Every demo account uses the password "password".
@@ -90,6 +92,9 @@ class DemoSeeder extends Seeder
         CompanyPayrollCountry::query()->firstOrCreate(['country_code' => 'PK'], ['is_primary' => false]);
         foreach (LeaveType::STARTERS as [$name, $code, $color, $paid, $balance, $approval, $reason, $attachment]) {
             LeaveType::query()->firstOrCreate(['code' => $code], ['name' => $name, 'color' => $color, 'is_paid' => $paid, 'uses_balance' => $balance, 'approval' => $approval, 'reason_required' => $reason, 'attachment_after_days' => $attachment]);
+        }
+        foreach (['AL' => ['Standard annual leave', 25], 'SL' => ['Sick leave allowance', 10], 'PL' => ['Parental leave', 26]] as $code => [$policyName, $days]) {
+            LeavePolicy::query()->firstOrCreate(['name' => $policyName], ['leave_type_id' => LeaveType::query()->where('code', $code)->value('id'), 'series_id' => (string) Str::ulid(), 'effective_from' => now()->startOfYear()->subYear()->toDateString(), 'annual_days' => $days, 'accrual' => 'upfront', 'carry_over_days' => $code === 'AL' ? 5 : 0]);
         }
 
         $london = Location::query()->firstOrCreate(['code' => 'LDN'], ['name' => 'London office', 'country_code' => 'GB', 'city' => 'London', 'timezone' => 'Europe/London']);

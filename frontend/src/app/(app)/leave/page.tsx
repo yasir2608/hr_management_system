@@ -1,6 +1,7 @@
 "use client";
 
 import { Guard } from "@/components/Guard";
+import { BalancesTab } from "@/components/leave/BalancesTab";
 import { LeaveTypesTab } from "@/components/leave/LeaveTypesTab";
 import { PoliciesTab } from "@/components/leave/PoliciesTab";
 import { PageHead } from "@/components/ui";
@@ -11,6 +12,7 @@ type TabDef = { key: string; label: string; permissions: string[]; render: () =>
 
 const tabs: TabDef[] = [
   { key: "types", label: "Leave types", permissions: ["leave.policies.manage", "leave.requests.view", "self.leave.request"], render: () => <LeaveTypesTab /> },
+  { key: "balances", label: "Balances", permissions: ["leave.requests.view", "leave.balances.manage"], render: () => <BalancesTab /> },
   { key: "policies", label: "Policies", permissions: ["leave.policies.manage"], render: () => <PoliciesTab /> },
 ];
 

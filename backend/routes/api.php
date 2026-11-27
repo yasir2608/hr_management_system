@@ -27,6 +27,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Leave\LeaveBalanceController;
 use App\Http\Controllers\Leave\LeavePolicyController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Onboarding\ActivationController;
@@ -172,6 +173,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Leave
         Route::get('/leave/types', [LeaveTypeController::class, 'index']);
+        Route::get('/me/leave/balances', [LeaveBalanceController::class, 'mine'])->middleware('permission:self.leave.request');
+        Route::get('/leave/employees/{employee}/balances', [LeaveBalanceController::class, 'forEmployee'])->whereUlid('employee');
+        Route::get('/leave/balances', [LeaveBalanceController::class, 'overview'])->middleware('permission:leave.requests.view,leave.balances.manage');
+        Route::post('/leave/balances/adjustments', [LeaveBalanceController::class, 'adjust'])->middleware('permission:leave.balances.manage');
         Route::middleware('permission:leave.policies.manage')->prefix('leave')->group(function (): void {
             Route::post('/types', [LeaveTypeController::class, 'store']);
             Route::put('/types/{leaveType}', [LeaveTypeController::class, 'update']);
