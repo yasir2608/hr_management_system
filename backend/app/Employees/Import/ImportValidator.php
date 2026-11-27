@@ -206,6 +206,15 @@ class ImportValidator
         return $values;
     }
 
+    /**
+     * Makes an employee created during the import available as a manager for later rows.
+     */
+    public function rememberEmployee(string $workEmail, string $employeeId): void
+    {
+        $this->loadLookups();
+        $this->employeesByEmail[strtolower($workEmail)] = $employeeId;
+    }
+
     public static function taxField(?string $country): string
     {
         return ['PK' => 'cnic', 'GB' => 'ni_number', 'US' => 'ssn'][$country] ?? 'tax_id';

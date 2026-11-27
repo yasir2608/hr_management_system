@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employees;
 
 use App\Access\Access;
+use App\Employees\Import\ConfirmImport;
 use App\Employees\Import\ImportColumns;
 use App\Employees\Import\ImportValidator;
 use App\Employees\Import\SpreadsheetReader;
@@ -186,6 +187,36 @@ class EmployeeImportController extends Controller
             }
             fclose($out);
         }, 'import-problems.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function confirm(Request $request, EmployeeImport $import, ConfirmImport $confirmImport): JsonResponse
+    {
+        abort_unless($import->isOpen(), 422, 'This import is already finished.');
+
+        $counts = $confirmImport->handle($import, $request->user());
+
+        return response()->json([
+            ...$import->fresh()->only(['id', 'original_name', 'status', 'row_count', 'created_count', 'completed_at']),
+            'counts' => $counts,
+            'results' => $import->fresh()->rows,
+            'message' => "{$counts['created']} employee(s) added."
+                .($counts['skipped'] > 0 ? " {$counts['skipped']} row(s) with problems were not saved." : '')
+                .($counts['failed'] > 0 ? " {$counts['failed']} row(s) could not be saved; try them again." : ''),
+        ]);
+    }
+
+    /**
+     * Past imports, with their results (never their row data).
+     */
+    public function index(): JsonResponse
+    {
+        $imports = EmployeeImport::query()->with('uploader:id,name')->latest()->limit(20)->get()
+            ->map(fn (EmployeeImport $import): array => [
+                ...$import->only(['id', 'original_name', 'status', 'row_count', 'created_count', 'created_at', 'completed_at']),
+                'uploaded_by' => $import->uploader?->name,
+            ]);
+
+        return response()->json(['data' => $imports]);
     }
 
     public function cancel(EmployeeImport $import): JsonResponse

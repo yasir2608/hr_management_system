@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Badge, Banner, humanize, Panel, Stat, Table } from "@/components/ui";
 import { api, download } from "@/lib/api";
@@ -33,8 +34,16 @@ export function Stepper({ current }: { current: number }) {
 }
 
 /** Shows the checked rows: ready ones, and the ones that need attention with the reason per cell. */
+type ImportResult = {
+  counts: { created: number; skipped: number; excluded: number; failed: number };
+  results: { row: number; name: string; outcome: string; employee_id?: string; employee_number?: string; problems?: number }[];
+  message: string;
+};
+
 export function ImportReview({ initial, warnings, onRestart }: { initial: ImportState; warnings: string[]; onRestart: () => void }) {
   const [state, setState] = useState(initial);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState<{ row: number; values: Record<string, string> } | null>(null);
   const [filter, setFilter] = useState<"all" | "attention" | "ready">(initial.error_count > 0 ? "attention" : "all");
   const keys = [...new Set(state.rows.flatMap((row) => Object.keys(row.values)))];
@@ -55,14 +64,64 @@ export function ImportReview({ initial, warnings, onRestart }: { initial: Import
     setState(await api<ImportState>(`/employee-imports/${state.id}/rows/${row}/toggle`, { method: "POST" }));
   }
 
+  async function confirm() {
+    setConfirming(true);
+    setResult(await api<ImportResult>(`/employee-imports/${state.id}/confirm`, { method: "POST" }));
+  }
+
   async function recheck() {
     setState(await api<ImportState>(`/employee-imports/${state.id}/validate`, { method: "POST" }));
   }
 
+  if (result) {
+    return (
+      <div className="stack">
+        <Stepper current={4} />
+        <Banner tone={result.counts.failed > 0 ? "error" : "success"}>{result.message}</Banner>
+        <div className="grid stats">
+          <Stat label="Employees added" value={result.counts.created} good />
+          <Stat label="Not saved: problems" value={result.counts.skipped} />
+          <Stat label="Left out" value={result.counts.excluded} />
+          <Stat label="Could not save" value={result.counts.failed} />
+        </div>
+        <Panel
+          title="Results"
+          subtitle="Rows with problems were not saved. Fix them in your file and import them again."
+          right={<div className="row"><Link className="btn primary" href="/employees">Go to employees</Link><button className="btn" onClick={onRestart}>Import another file</button></div>}
+          bodyless
+        >
+          <Table headers={["Row", "Name", "Outcome", ""]}>
+            {result.results.map((row) => (
+              <tr key={row.row}>
+                <td className="muted">{row.row}</td>
+                <td>{row.name || "—"}</td>
+                <td>
+                  {row.outcome === "created" && <Badge tone="green" label={`Added as ${row.employee_number}`} />}
+                  {row.outcome === "skipped" && <Badge tone="amber" label={`Not saved (${row.problems} problem${row.problems === 1 ? "" : "s"})`} />}
+                  {row.outcome === "excluded" && <Badge tone="gray" label="Left out" />}
+                  {row.outcome === "failed" && <Badge tone="red" label="Could not save" />}
+                </td>
+                <td>{row.employee_id && <Link className="link" href={`/employees/${row.employee_id}`}>Open</Link>}</td>
+              </tr>
+            ))}
+          </Table>
+        </Panel>
+      </div>
+    );
+  }
+
   return (
     <div className="stack">
-      <Stepper current={2} />
+      <Stepper current={state.error_count === 0 ? 3 : 2} />
       {warnings.map((warning) => <Banner key={warning} tone="info">{warning}</Banner>)}
+      <div className="callout blue" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <span>
+          {state.ready_count} row(s) ready. {state.error_count > 0 ? `${state.error_count} row(s) with problems will not be saved unless you fix them.` : "No problems left."} Each employee is saved completely or not at all.
+        </span>
+        <button className="btn primary" disabled={confirming || state.ready_count === 0} onClick={() => void confirm()}>
+          {confirming ? "Saving…" : `Import ${state.ready_count} employee(s)`}
+        </button>
+      </div>
       <div className="grid stats">
         <Stat label="Rows in file" value={state.row_count} />
         <Stat label="Ready to import" value={state.ready_count} good note="No problems found" />
