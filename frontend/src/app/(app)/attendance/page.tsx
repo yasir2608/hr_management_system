@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MonthView } from "@/components/attendance/MonthView";
+import { MyAttendanceTab } from "@/components/attendance/MyAttendanceTab";
 import { RecordsTab } from "@/components/attendance/RecordsTab";
 import { ExceptionsTab } from "@/components/attendance/ExceptionsTab";
 import { Guard } from "@/components/Guard";
@@ -12,7 +12,7 @@ import { useTab } from "@/lib/useTab";
 type TabDef = { key: string; label: string; permissions: string[]; render: () => React.ReactNode };
 
 const tabs: TabDef[] = [
-  { key: "mine", label: "My attendance", permissions: ["self.attendance.clock"], render: () => <MonthView path="/me/attendance" title="My shifts" /> },
+  { key: "mine", label: "My attendance", permissions: ["self.attendance.clock"], render: () => <MyAttendanceTab /> },
   { key: "records", label: "Records", permissions: ["attendance.view", "attendance.manage"], render: () => <RecordsTab /> },
   { key: "exceptions", label: "Exceptions", permissions: ["attendance.view", "attendance.manage"], render: () => <ExceptionsTab /> },
 ];
