@@ -118,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/dashboard/hr', [DashboardController::class, 'hr'])->middleware('permission:employees.view,employees.manage');
         Route::get('/dashboard/payroll', [DashboardController::class, 'payroll'])->middleware('permission:payroll.view,payroll.run,payroll.settings.manage');
         Route::get('/dashboard/manager', [DashboardController::class, 'manager'])->middleware('permission:employees.view,leave.approve,attendance.view');
+        Route::get('/dashboard/me', [DashboardController::class, 'employee'])->middleware('permission:self.profile.view');
 
         // Company setup
         Route::middleware('permission:company.settings.view,company.settings.manage')->group(function (): void {

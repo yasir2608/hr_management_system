@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Dashboards\EmployeeDashboard;
 use App\Dashboards\HrDashboard;
 use App\Dashboards\ManagerDashboard;
 use App\Dashboards\PayrollDashboard;
@@ -25,5 +26,10 @@ class DashboardController extends Controller
     public function manager(ManagerDashboard $dashboard): JsonResponse
     {
         return response()->json($dashboard->build());
+    }
+
+    public function employee(EmployeeDashboard $dashboard): JsonResponse
+    {
+        return response()->json(['data' => $dashboard->build()]);
     }
 }

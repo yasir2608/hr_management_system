@@ -1,6 +1,7 @@
 "use client";
 
 import { SetupChecklist } from "@/components/company/SetupChecklist";
+import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
 import { HrDashboard } from "@/components/dashboard/HrDashboard";
 import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { PayrollDashboard } from "@/components/dashboard/PayrollDashboard";
@@ -13,12 +14,13 @@ function greeting(hour: number) {
 /**
  * Dashboard from the visual design: greeting and date, then the dashboard for the viewer's role.
  * HR (people who manage employee records) get the owner / HR dashboard, managers the team dashboard, and people
- * with payroll access also get the payroll dashboard.
+ * with payroll access also get the payroll dashboard. Everyone else gets their own "My HR" dashboard.
  */
 export default function DashboardPage() {
   const { user, company, can, access } = useAuth();
   const isHr = can("employees.manage");
   const isManager = !isHr && (access?.roles.includes("manager") ?? false);
+  const isPayroll = can("payroll.view", "payroll.run", "payroll.settings.manage");
   const firstName = user?.name.split(" ")[0] ?? "";
   const now = new Date();
 
@@ -34,7 +36,8 @@ export default function DashboardPage() {
       <SetupChecklist compact />
       {isHr && <HrDashboard />}
       {isManager && <ManagerDashboard />}
-      {can("payroll.view", "payroll.run", "payroll.settings.manage") && <PayrollDashboard heading={isHr || isManager} />}
+      {isPayroll && <PayrollDashboard heading={isHr || isManager} />}
+      {!isHr && !isManager && !isPayroll && can("self.profile.view") && <EmployeeDashboard />}
     </>
   );
 }
