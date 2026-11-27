@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * An in-product notification for one person. See App\Support\Notifier.
  */
-#[Fillable(['user_id', 'kind', 'title', 'body', 'link', 'permission', 'subject_type', 'subject_id', 'action_required', 'read_at', 'resolved_at'])]
+#[Fillable(['user_id', 'kind', 'title', 'body', 'link', 'permission', 'subject_type', 'subject_id', 'action_required', 'read_at', 'resolved_at', 'emailed_at'])]
 class UserNotification extends Model
 {
     use BelongsToCompany, HasUlids;
@@ -22,6 +22,6 @@ class UserNotification extends Model
      */
     protected function casts(): array
     {
-        return ['action_required' => 'boolean', 'read_at' => 'datetime', 'resolved_at' => 'datetime', 'created_at' => 'datetime'];
+        return ['action_required' => 'boolean', 'read_at' => 'datetime', 'resolved_at' => 'datetime', 'emailed_at' => 'datetime', 'created_at' => 'datetime'];
     }
 }

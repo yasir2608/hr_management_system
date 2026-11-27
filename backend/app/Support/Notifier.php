@@ -3,14 +3,18 @@
 namespace App\Support;
 
 use App\Models\CompanyUser;
+use App\Models\User;
 use App\Models\UserNotification;
+use App\Notifications\AttentionNeeded;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
- * Sends in-product notifications to people in the current company. Callers pass plain wording only: titles and
- * bodies must never contain salary, bank, tax or identity details (they may appear in previews and emails).
+ * Sends in-product notifications to people in the current company, each with an email copy (title and link only;
+ * the mail driver decides delivery, `log` in the demo). Callers pass plain wording only: titles and bodies must
+ * never contain salary, bank, tax or identity details (titles appear in email subjects and previews).
  * - the person who caused the event is not notified about it
  * - a notification that asks for an action is resolved for everyone once the action is done
  */
@@ -38,7 +42,7 @@ class Notifier
             if ($userId === $actor && ! ($options['include_actor'] ?? false)) {
                 continue;
             }
-            UserNotification::query()->create([
+            $notification = UserNotification::query()->create([
                 'user_id' => $userId,
                 'kind' => $kind,
                 'title' => mb_substr($title, 0, 200),
@@ -49,10 +53,35 @@ class Notifier
                 'subject_id' => $subject?->getKey(),
                 'action_required' => $options['action_required'] ?? false,
             ]);
+            self::email($notification);
             $sent++;
         }
 
         return $sent;
+    }
+
+    /**
+     * Sends the email copy: the short title and a link only (no body text, which can hold free-text details).
+     * A failed email never stops the in-product notification.
+     */
+    private static function email(UserNotification $notification): void
+    {
+        $user = User::query()->find($notification->user_id);
+        if ($user === null || blank($user->email)) {
+            return;
+        }
+
+        try {
+            $user->notify(new AttentionNeeded(
+                $notification->title,
+                $notification->link,
+                (string) (app(CurrentCompany::class)->get()?->name ?? 'M.Y HRMS'),
+                $notification->action_required,
+            ));
+            $notification->forceFill(['emailed_at' => now()])->save();
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     /**
