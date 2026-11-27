@@ -88,6 +88,34 @@ class CorrectionController extends Controller
         return response()->json(['id' => $correction->id, 'message' => 'Your correction was sent to your manager. The recorded times stay as they are until it is approved.'], 201);
     }
 
+    /**
+     * Corrections of people within the viewer's attendance scope.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $status = $request->validate(['status' => ['nullable', 'string']])['status'] ?? 'pending,info_requested';
+
+        $corrections = $this->access->scopeFor('attendance.view')->applyByEmployee(AttendanceCorrection::query())->with('employee')
+            ->when($status !== 'all', fn ($query) => $query->whereIn('status', explode(',', $status)))
+            ->latest()->limit(200)->get();
+
+        return response()->json(['data' => $corrections->map(fn (AttendanceCorrection $correction): array => [
+            ...self::present($correction),
+            'employee' => ['id' => $correction->employee->id, 'full_name' => $correction->employee->fullName()],
+        ])]);
+    }
+
+    /**
+     * Every correction of one shift, oldest first: how the record changed over time.
+     */
+    public function history(AttendanceRecord $record): JsonResponse
+    {
+        abort_unless($record->employee->user_id === auth()->id() || $this->access->scopeFor('attendance.view')->covers($record->employee), 404);
+
+        return response()->json(['data' => AttendanceCorrection::query()->where('attendance_record_id', $record->id)->oldest()->get()
+            ->map(fn (AttendanceCorrection $correction): array => self::present($correction))]);
+    }
+
     public function mine(): JsonResponse
     {
         $employee = $this->access->employee() ?? abort(404);

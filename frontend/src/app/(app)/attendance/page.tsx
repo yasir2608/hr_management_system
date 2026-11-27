@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MyAttendanceTab } from "@/components/attendance/MyAttendanceTab";
 import { RecordsTab } from "@/components/attendance/RecordsTab";
 import { ExceptionsTab } from "@/components/attendance/ExceptionsTab";
+import { CorrectionsTab } from "@/components/attendance/CorrectionsTab";
 import { Guard } from "@/components/Guard";
 import { PageHead } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -15,6 +16,7 @@ const tabs: TabDef[] = [
   { key: "mine", label: "My attendance", permissions: ["self.attendance.clock"], render: () => <MyAttendanceTab /> },
   { key: "records", label: "Records", permissions: ["attendance.view", "attendance.manage"], render: () => <RecordsTab /> },
   { key: "exceptions", label: "Exceptions", permissions: ["attendance.view", "attendance.manage"], render: () => <ExceptionsTab /> },
+  { key: "corrections", label: "Corrections", permissions: ["attendance.view", "attendance.corrections.approve"], render: () => <CorrectionsTab /> },
 ];
 
 function AttendancePage() {

@@ -222,6 +222,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         });
         Route::get('/attendance/records', [AttendanceHistoryController::class, 'index'])->middleware('permission:attendance.view,attendance.manage');
         Route::get('/attendance/exceptions', AttendanceExceptionController::class)->middleware('permission:attendance.view,attendance.manage');
+        Route::get('/attendance/corrections', [CorrectionController::class, 'index'])->middleware('permission:attendance.view,attendance.corrections.approve');
+        Route::get('/attendance/records/{record}/corrections', [CorrectionController::class, 'history'])->whereUlid('record');
         Route::get('/attendance/employees/{employee}', [AttendanceHistoryController::class, 'forEmployee'])->whereUlid('employee');
 
         // Activity history

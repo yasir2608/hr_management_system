@@ -84,6 +84,45 @@ class AttendanceCorrection extends Model implements Approvable, TracksApprovalSt
             default => self::STATUS_CANCELLED,
         }])->save();
 
+        if ($this->status === self::STATUS_APPROVED) {
+            $this->apply();
+        }
+
         Activity::record("attendance.correction_{$this->status}", "Attendance correction for {$this->employee->fullName()} on {$this->work_date->toDateString()} {$this->status}", $this);
+    }
+
+    /**
+     * Writes the approved times to the attendance record (or adds the missing shift). The
+     * original times stay on this correction, so the record's history can always be read back.
+     */
+    public function apply(): AttendanceRecord
+    {
+        $offset = fn ($moment): ?int => $moment?->copy()->setTimezone($this->timezone)->utcOffset();
+
+        $values = [
+            'work_date' => $this->work_date->toDateString(),
+            'clock_in_at' => $this->requested_clock_in_at,
+            'clock_in_timezone' => $this->timezone,
+            'clock_in_utc_offset' => $offset($this->requested_clock_in_at),
+            'clock_out_at' => $this->requested_clock_out_at,
+            'clock_out_timezone' => $this->requested_clock_out_at ? $this->timezone : null,
+            'clock_out_utc_offset' => $offset($this->requested_clock_out_at),
+            'source' => 'correction',
+        ];
+
+        $record = $this->record ?? new AttendanceRecord(['employee_id' => $this->employee_id]);
+        $record->forceFill($values)->save();
+
+        $this->forceFill(['attendance_record_id' => $record->id, 'applied_at' => now()])->save();
+
+        Activity::record('attendance.record_corrected', "Attendance on {$this->work_date->toDateString()} corrected for {$this->employee->fullName()}", $record, [
+            'correction_id' => $this->id,
+            'changes' => [
+                'clock_in_at' => ['old' => $this->original_clock_in_at?->toIso8601String(), 'new' => $this->requested_clock_in_at->toIso8601String()],
+                'clock_out_at' => ['old' => $this->original_clock_out_at?->toIso8601String(), 'new' => $this->requested_clock_out_at?->toIso8601String()],
+            ],
+        ]);
+
+        return $record;
     }
 }
