@@ -10,8 +10,29 @@ type Options = {
   countries: { country_code: string; country_name: string; currency: string }[];
   groups: { id: string; name: string; country_code: string }[];
   types: { key: string; name: string; description: string }[];
+  filing_summaries: Record<string, string>;
   notice: string;
 };
+type Section = { key: string; title: string; description: string; columns: Column[]; rows: Row[]; totals: Record<string, string> };
+type Filing = {
+  country: string; name: string; description: string; currency: string; sections: Section[];
+  employee_count: number; run_count: number; warnings: string[]; tax_ids_restricted: boolean;
+  excluded: { employee_id: string; name: string; reason: string }[];
+};
+
+const FILING = "filing_summary";
+/** First day of the tax year, as month-day: Pakistan 1 July, UK 6 April, US 1 January. */
+const TAX_YEAR_START: Record<string, string> = { PK: "07-01", GB: "04-06", US: "01-01" };
+
+function currentTaxYear(country: string) {
+  const start = TAX_YEAR_START[country] ?? "01-01";
+  const today = new Date().toISOString().slice(0, 10);
+  const year = Number(today.slice(0, 4));
+  const from = `${today.slice(5) >= start ? year : year - 1}-${start}`;
+  const end = new Date(`${Number(from.slice(0, 4)) + 1}-${start}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() - 1);
+  return { from, to: end.toISOString().slice(0, 10) };
+}
 type Column = { key: string; label: string; type: "text" | "money" | "number" | "date" };
 type Row = Record<string, string | number | boolean | null>;
 type Report = {
@@ -28,6 +49,7 @@ function PayrollReportsPage() {
   const [options, setOptions] = useState<Options | null>(null);
   const [filters, setFilters] = useState({ type: "register", country: "", group_id: "", from: `${year}-01-01`, to: `${year}-12-31` });
   const [report, setReport] = useState<Report | null>(null);
+  const [filing, setFiling] = useState<Filing | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,18 +60,24 @@ function PayrollReportsPage() {
     });
   }, []);
 
-  const set = (patch: Partial<typeof filters>) => { setFilters({ ...filters, ...patch }); setReport(null); };
+  const set = (patch: Partial<typeof filters>) => { setFilters({ ...filters, ...patch }); setReport(null); setFiling(null); };
   const query = () => ({ country: filters.country, from: filters.from, to: filters.to, ...(filters.group_id ? { group_id: filters.group_id } : {}) });
   const fieldError = (key: string) => error?.errors[key]?.[0];
+  const path = filters.type === FILING ? "/payroll/reports/filing-summary" : `/payroll/reports/${filters.type}`;
 
   async function preview() {
     setError(null);
     setLoading(true);
     try {
-      setReport(await api<Report>(`/payroll/reports/${filters.type}`, { query: query() }));
+      if (filters.type === FILING) {
+        setFiling(await api<Filing>(path, { query: query() }));
+      } else {
+        setReport(await api<Report>(path, { query: query() }));
+      }
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : new ApiError("Could not build the report.", 0));
       setReport(null);
+      setFiling(null);
     } finally {
       setLoading(false);
     }
@@ -58,7 +86,7 @@ function PayrollReportsPage() {
   async function downloadCsv() {
     setError(null);
     try {
-      await download(`/payroll/reports/${filters.type}/download`, query());
+      await download(`${path}/download`, query());
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : new ApiError("Could not download the report.", 0));
     }
@@ -70,7 +98,12 @@ function PayrollReportsPage() {
   }
 
   const groups = options.groups.filter((group) => group.country_code === filters.country);
-  const chosen = options.types.find((type) => type.key === filters.type);
+  const filingName = options.filing_summaries[filters.country];
+  const types = [
+    ...options.types,
+    ...(filingName ? [{ key: FILING, name: filingName, description: "Approved figures arranged by filing period to help you complete your own country filings. Not the official forms." }] : []),
+  ];
+  const chosen = types.find((type) => type.key === filters.type);
   const cell = (column: Column, value: Row[string] | undefined, currency: string) => {
     if (value === null || value === undefined || value === "") return column.type === "money" ? "" : "—";
     if (column.type === "money") return money(String(value), currency);
@@ -86,7 +119,7 @@ function PayrollReportsPage() {
 
       <Panel title="Choose a report">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginBottom: 16 }}>
-          {options.types.map((type) => (
+          {types.map((type) => (
             <label key={type.key} className="checkrow" style={{ alignItems: "flex-start", border: `1px solid ${filters.type === type.key ? "var(--blue)" : "var(--line, #e3e8ef)"}`, borderRadius: 10, padding: 12, cursor: "pointer" }}>
               <input type="radio" name="report" checked={filters.type === type.key} onChange={() => set({ type: type.key })} style={{ marginTop: 3 }} />
               <span><strong>{type.name}</strong><span className="tiny" style={{ display: "block" }}>{type.description}</span></span>
@@ -95,7 +128,7 @@ function PayrollReportsPage() {
         </div>
         <div className="formgrid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
           <Field label="Country" required error={fieldError("country")}>
-            <select value={filters.country} onChange={(event) => set({ country: event.target.value, group_id: "" })}>
+            <select value={filters.country} onChange={(event) => set({ country: event.target.value, group_id: "", ...(filters.type === FILING && !options.filing_summaries[event.target.value] ? { type: "register" } : {}) })}>
               {options.countries.map((country) => <option key={country.country_code} value={country.country_code}>{country.country_name} ({country.currency})</option>)}
             </select>
           </Field>
@@ -110,9 +143,53 @@ function PayrollReportsPage() {
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <button className="btn primary" disabled={loading} onClick={() => void preview()}>{loading ? "Building…" : `Preview ${chosen?.name.toLowerCase() ?? "report"}`}</button>
-          {report && <button className="btn" onClick={() => void downloadCsv()}>Download CSV</button>}
+          {(report || filing) && <button className="btn" onClick={() => void downloadCsv()}>Download CSV</button>}
+          <button className="btn soft" onClick={() => set(currentTaxYear(filters.country))}>Use current tax year</button>
         </div>
       </Panel>
+
+      {filing && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
+            <Stat label="Employees included" value={filing.employee_count} />
+            <Stat label="Payroll runs" value={filing.run_count} />
+            <Stat label="Left out" value={filing.excluded.length} />
+            <Stat label="Currency" value={filing.currency} />
+          </div>
+          <Banner tone="info">{filing.description}</Banner>
+          {filing.tax_ids_restricted && <Banner tone="info">Tax identifiers are hidden because you do not have access to them.</Banner>}
+          {filing.warnings.map((warning) => <Banner key={warning} tone="info">{warning}</Banner>)}
+          {filing.sections.map((section) => (
+            <Panel key={section.key} title={section.title} subtitle={section.description} bodyless={section.rows.length > 0}>
+              {section.rows.length === 0 ? <span className="muted">No approved pay in this range.</span> : (
+                <div style={{ overflowX: "auto" }}>
+                  <Table headers={section.columns.map((column) => <span key={column.key} style={{ display: "block", textAlign: column.type === "money" || column.type === "number" ? "right" : "left" }}>{column.label}</span>)}>
+                    {section.rows.map((row, index) => (
+                      <tr key={index}>
+                        {section.columns.map((column) => <td key={column.key} style={{ textAlign: column.type === "money" || column.type === "number" ? "right" : "left", whiteSpace: column.type === "money" ? "nowrap" : undefined }}>{cell(column, row[column.key], filing.currency)}</td>)}
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 600, borderTop: "2px solid var(--line, #e3e8ef)" }}>
+                      {section.columns.map((column, index) => (
+                        <td key={column.key} style={{ textAlign: column.type === "money" ? "right" : "left", whiteSpace: "nowrap" }}>
+                          {index === 0 ? "Total" : section.totals[column.key] !== undefined ? cell(column, section.totals[column.key], filing.currency) : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  </Table>
+                </div>
+              )}
+            </Panel>
+          ))}
+          {filing.excluded.length > 0 && (
+            <Panel title="Not included" subtitle="Employees left out of a payroll run in this range." bodyless>
+              <Table headers={["Employee", "Reason"]}>
+                {filing.excluded.map((row, index) => <tr key={`${row.employee_id}-${index}`}><td><Link className="link" href={`/payroll/employees/${row.employee_id}`}>{row.name}</Link></td><td>{row.reason}</td></tr>)}
+              </Table>
+            </Panel>
+          )}
+        </>
+      )}
 
       {report && (
         <>

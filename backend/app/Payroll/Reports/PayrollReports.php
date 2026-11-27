@@ -27,7 +27,7 @@ class PayrollReports
         'earning' => 'Earnings',
         'pre_tax_deduction' => 'Pre-tax deductions',
         'tax' => 'Taxes',
-        'contribution' => 'Employee contributions',
+        'employee_contribution' => 'Employee contributions',
         'post_tax_deduction' => 'Post-tax deductions',
         'employer_contribution' => 'Employer contributions',
     ];

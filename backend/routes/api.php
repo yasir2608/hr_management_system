@@ -343,6 +343,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/payroll/bank-formats', [BankFormatController::class, 'index'])->middleware('permission:payroll.view,payroll.settings.manage,payroll.export');
         Route::middleware('permission:payroll.reports.view')->group(function (): void {
             Route::get('/payroll/reports', [PayrollReportController::class, 'options']);
+            Route::get('/payroll/reports/filing-summary', [PayrollReportController::class, 'filingSummary']);
+            Route::get('/payroll/reports/filing-summary/download', [PayrollReportController::class, 'downloadFilingSummary']);
             Route::get('/payroll/reports/{type}', [PayrollReportController::class, 'show'])->whereIn('type', array_keys(PayrollReports::TYPES));
             Route::get('/payroll/reports/{type}/download', [PayrollReportController::class, 'download'])->whereIn('type', array_keys(PayrollReports::TYPES));
         });
