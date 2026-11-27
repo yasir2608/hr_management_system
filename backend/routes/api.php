@@ -25,6 +25,7 @@ use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\Employees\EmployeeDocumentController;
 use App\Http\Controllers\Employees\EmployeeImportController;
 use App\Http\Controllers\Employees\SelfServiceController;
+use App\Http\Controllers\Onboarding\OnboardingTaskController;
 use App\Http\Controllers\Onboarding\OnboardingTemplateController;
 use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
@@ -144,7 +145,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::put('/templates/{template}', [OnboardingTemplateController::class, 'update']);
             Route::post('/templates/{template}/default', [OnboardingTemplateController::class, 'makeDefault']);
             Route::delete('/templates/{template}', [OnboardingTemplateController::class, 'destroy']);
+            Route::get('/employees', [OnboardingTaskController::class, 'overview']);
+            Route::post('/employees/{employee}/start', [OnboardingTaskController::class, 'start'])->whereUlid('employee');
         });
+        Route::get('/onboarding/employees/{employee}/tasks', [OnboardingTaskController::class, 'forEmployee'])->whereUlid('employee');
+        Route::get('/onboarding/my-tasks', [OnboardingTaskController::class, 'mine']);
+        Route::patch('/onboarding/tasks/{task}', [OnboardingTaskController::class, 'update']);
 
         // Users with access to the company
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,users.manage');

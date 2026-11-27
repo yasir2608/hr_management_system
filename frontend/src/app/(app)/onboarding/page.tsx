@@ -1,11 +1,15 @@
 "use client";
 
 import { Guard } from "@/components/Guard";
+import { StartersTab } from "@/components/onboarding/StartersTab";
 import { TemplatesTab } from "@/components/onboarding/TemplatesTab";
 import { PageHead } from "@/components/ui";
 import { useTab } from "@/lib/useTab";
 
-const tabs = [{ key: "templates", label: "Checklists", render: () => <TemplatesTab /> }];
+const tabs = [
+  { key: "starters", label: "New starters", render: () => <StartersTab /> },
+  { key: "templates", label: "Checklists", render: () => <TemplatesTab /> },
+];
 
 function OnboardingPage() {
   const [active, setActive] = useTab(tabs.map((tab) => tab.key));

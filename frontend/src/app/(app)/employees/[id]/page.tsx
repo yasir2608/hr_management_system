@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DocumentsPanel } from "@/components/employees/DocumentsPanel";
+import { OnboardingTasksPanel } from "@/components/onboarding/OnboardingTasksPanel";
 import { UpdateRequestsPanel } from "@/components/employees/UpdateRequestsPanel";
 import { ChangeStatusModal, EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { NoAccess } from "@/components/Guard";
 import { Badge, Banner, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { useTab } from "@/lib/useTab";
 import { countryName } from "@/lib/countries";
 import { statusLabel, type Employee } from "@/lib/employees";
 
@@ -66,7 +69,8 @@ export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useTab(["overview", "history", "payroll", "documents", "onboarding"]);
+  const { can } = useAuth();
   const [modal, setModal] = useState<"details" | "change" | "payroll" | "status" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -91,6 +95,7 @@ export default function EmployeeDetailPage() {
     ...(history ? [["history", "Employment history"]] : []),
     ["payroll", "Pay & tax"],
     ["documents", "Documents"],
+    ...(can("onboarding.manage") ? [["onboarding", "Onboarding"]] : []),
   ];
 
   return (
@@ -186,6 +191,7 @@ export default function EmployeeDetailPage() {
       )}
 
       {tab === "documents" && <DocumentsPanel employeeId={summary.id} />}
+      {tab === "onboarding" && <OnboardingTasksPanel employeeId={summary.id} />}
 
       {tab === "payroll" && (
         <div className="grid split">
