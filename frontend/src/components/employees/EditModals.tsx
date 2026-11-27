@@ -211,3 +211,36 @@ export function PayrollDetailsModal({ employee, onClose, onDone }: Props) {
     </Modal>
   );
 }
+
+/** Moves the employee to the next lifecycle status. Ended records are kept. */
+export function ChangeStatusModal({ employee, nextStatuses, onClose, onDone }: Props & { nextStatuses: string[] }) {
+  const [form, setForm] = useState({ status: nextStatuses[0] ?? "", effective_from: new Date().toISOString().slice(0, 10), reason: "", remove_access: true });
+  const { error, saving, submit, err } = useSubmit(`/employees/${employee.id}/status`, "POST", onDone);
+  const label = (status: string) => ({ invited: "Invited", onboarding: "Onboarding", active: "Active", on_leave: "On leave", ended: "Ended" })[status] ?? status;
+
+  return (
+    <Modal title="Change status" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className={`btn ${form.status === "ended" ? "danger" : "primary"}`} disabled={saving} onClick={() => void submit(form)}>Change status</button></>}>
+      {error && <Banner tone="error">{error.message}</Banner>}
+      <div className="formgrid">
+        <Field label="New status" error={err("status")}>
+          <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+            {nextStatuses.map((status) => <option key={status} value={status}>{label(status)}</option>)}
+          </select>
+        </Field>
+        <Field label={form.status === "ended" ? "Last day" : "From"} required error={err("effective_from")}>
+          <input className="input" type="date" value={form.effective_from} onChange={(event) => setForm({ ...form, effective_from: event.target.value })} />
+        </Field>
+        <Field label="Reason" required full error={err("reason")} hint={form.status === "ended" ? "e.g. Resigned, End of contract" : undefined}>
+          <input className="input" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} />
+        </Field>
+        {form.status === "ended" && employee.has_account && (
+          <label className="checkrow field full">
+            <input type="checkbox" checked={form.remove_access} onChange={(event) => setForm({ ...form, remove_access: event.target.checked })} />
+            Also remove their access to M.Y HRMS
+          </label>
+        )}
+        {employee.current_status === "ended" && <div className="callout blue field full">Re-hiring starts a new period of employment from this date. The earlier period stays in history.</div>}
+      </div>
+    </Modal>
+  );
+}

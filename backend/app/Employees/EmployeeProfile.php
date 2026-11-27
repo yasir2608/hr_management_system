@@ -87,6 +87,7 @@ class EmployeeProfile
             'restricted_sections' => $restricted,
             'is_self' => $isSelf,
             'can_edit' => $isHr,
+            'next_statuses' => $isHr ? StatusLifecycle::nextStatuses($employee) : [],
             'can_edit_payroll' => $this->access->can('payroll.settings.manage'),
         ];
     }

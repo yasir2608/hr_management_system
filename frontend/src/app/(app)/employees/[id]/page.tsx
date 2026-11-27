@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
+import { ChangeStatusModal, EditDetailsModal, PayrollDetailsModal, RecordChangeModal } from "@/components/employees/EditModals";
 import { NoAccess } from "@/components/Guard";
 import { Badge, Banner, EmptyState, formatDate, humanize, initials, money, Panel, Table } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -25,6 +25,7 @@ type Profile = {
   is_self: boolean;
   can_edit: boolean;
   can_edit_payroll: boolean;
+  next_statuses: string[];
 };
 
 const restrictedText: Record<string, string> = {
@@ -64,7 +65,7 @@ export default function EmployeeDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [tab, setTab] = useState("overview");
-  const [modal, setModal] = useState<"details" | "change" | "payroll" | null>(null);
+  const [modal, setModal] = useState<"details" | "change" | "payroll" | "status" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -104,6 +105,7 @@ export default function EmployeeDetailPage() {
         </div>
         <div className="actions">
           {profile.can_edit && <button className="btn" onClick={() => setModal("details")}>Edit details</button>}
+          {profile.next_statuses.length > 0 && <button className="btn" onClick={() => setModal("status")}>Change status</button>}
           {(profile.can_edit || profile.can_edit_payroll) && <button className="btn primary" onClick={() => setModal("change")}>Record a change</button>}
           {profile.can_edit_payroll && <button className="btn soft" onClick={() => setModal("payroll")}>Payroll details</button>}
         </div>
@@ -111,6 +113,7 @@ export default function EmployeeDetailPage() {
       {notice && <Banner tone="success">{notice}</Banner>}
       {modal === "details" && <EditDetailsModal employee={summary} personal={personal ?? undefined} onClose={() => setModal(null)} onDone={done} />}
       {modal === "change" && <RecordChangeModal employee={summary} canChangePay={profile.can_edit_payroll} onClose={() => setModal(null)} onDone={done} />}
+      {modal === "status" && <ChangeStatusModal employee={summary} nextStatuses={profile.next_statuses} onClose={() => setModal(null)} onDone={done} />}
       {modal === "payroll" && <PayrollDetailsModal employee={summary} onClose={() => setModal(null)} onDone={done} />}
 
       <div className="tabs" role="tablist">

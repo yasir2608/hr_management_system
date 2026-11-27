@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->whereUlid('employee');
         Route::put('/employees/{employee}', [EmployeeChangeController::class, 'updateDetails'])->whereUlid('employee');
         Route::post('/employees/{employee}/changes', [EmployeeChangeController::class, 'recordChange'])->whereUlid('employee');
+        Route::post('/employees/{employee}/status', [EmployeeChangeController::class, 'changeStatus'])->whereUlid('employee');
         Route::put('/employees/{employee}/payroll-details', [EmployeeChangeController::class, 'updatePayrollDetails'])->whereUlid('employee');
         Route::get('/employees/form-options', [EmployeeController::class, 'formOptions'])->middleware('permission:employees.manage,payroll.settings.manage');
         Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.manage');

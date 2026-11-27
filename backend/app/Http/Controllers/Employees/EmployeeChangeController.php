@@ -6,6 +6,7 @@ use App\Access\Access;
 use App\Employees\CreateEmployee;
 use App\Employees\EmployeeRecord;
 use App\Employees\EmployeeRules;
+use App\Employees\StatusLifecycle;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Support\Activity;
@@ -110,6 +111,26 @@ class EmployeeChangeController extends Controller
         return response()->json([
             'message' => $future ? "Change saved. It takes effect on {$from}; until then the current value stays." : 'Change saved. The previous value is kept in history.',
         ], 201);
+    }
+
+    public function changeStatus(Request $request, Employee $employee, StatusLifecycle $lifecycle): JsonResponse
+    {
+        $this->authorizeHr($employee);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(Employee::STATUSES)],
+            'effective_from' => ['required', 'date'],
+            'reason' => ['required', 'string', 'max:255'],
+            'remove_access' => ['boolean'],
+        ], ['reason.required' => 'Give a short reason; it is kept with the history.']);
+
+        $lifecycle->change($employee, $data['status'], $data['effective_from'], $data['reason'], $request->user(), (bool) ($data['remove_access'] ?? false));
+
+        return response()->json([
+            'message' => $data['status'] === Employee::STATUS_ENDED
+                ? 'Employment ended. The record and its history are kept.'
+                : 'Status changed.',
+        ]);
     }
 
     public function updatePayrollDetails(Request $request, Employee $employee, CreateEmployee $createEmployee): JsonResponse
