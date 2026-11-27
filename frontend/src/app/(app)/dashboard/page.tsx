@@ -2,6 +2,7 @@
 
 import { SetupChecklist } from "@/components/company/SetupChecklist";
 import { HrDashboard } from "@/components/dashboard/HrDashboard";
+import { PayrollDashboard } from "@/components/dashboard/PayrollDashboard";
 import { useAuth } from "@/lib/auth";
 
 function greeting(hour: number) {
@@ -10,7 +11,7 @@ function greeting(hour: number) {
 
 /**
  * Dashboard from the visual design: greeting and date, then the dashboard for the viewer's role.
- * People with company-wide people access get the owner / HR dashboard.
+ * People with people access get the owner / HR dashboard; people with payroll access also get the payroll dashboard.
  */
 export default function DashboardPage() {
   const { user, company, can } = useAuth();
@@ -28,6 +29,7 @@ export default function DashboardPage() {
       </div>
       <SetupChecklist compact />
       {can("employees.view", "employees.manage") && <HrDashboard />}
+      {can("payroll.view", "payroll.run", "payroll.settings.manage") && <PayrollDashboard heading={can("employees.view", "employees.manage")} />}
     </>
   );
 }

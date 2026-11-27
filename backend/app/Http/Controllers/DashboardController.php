@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Dashboards\HrDashboard;
+use App\Dashboards\PayrollDashboard;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -11,6 +12,11 @@ use Illuminate\Http\JsonResponse;
 class DashboardController extends Controller
 {
     public function hr(HrDashboard $dashboard): JsonResponse
+    {
+        return response()->json($dashboard->build());
+    }
+
+    public function payroll(PayrollDashboard $dashboard): JsonResponse
     {
         return response()->json($dashboard->build());
     }
