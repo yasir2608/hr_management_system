@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\CompanyNotificationSetting;
 use App\Models\CompanyUser;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Models\UserNotificationPreference;
 use App\Notifications\AttentionNeeded;
 use App\Tenancy\CurrentCompany;
 use Illuminate\Database\Eloquent\Model;
@@ -64,24 +66,39 @@ class Notifier
      * Sends the email copy: the short title and a link only (no body text, which can hold free-text details).
      * A failed email never stops the in-product notification.
      */
-    private static function email(UserNotification $notification): void
+    public static function email(UserNotification $notification, bool $reminder = false): bool
     {
         $user = User::query()->find($notification->user_id);
-        if ($user === null || blank($user->email)) {
-            return;
+        if ($user === null || blank($user->email) || ! self::emailAllowed($notification)) {
+            return false;
         }
 
         try {
             $user->notify(new AttentionNeeded(
-                $notification->title,
+                ($reminder ? 'Reminder: ' : '').$notification->title,
                 $notification->link,
                 (string) (app(CurrentCompany::class)->get()?->name ?? 'M.Y HRMS'),
                 $notification->action_required,
             ));
             $notification->forceFill(['emailed_at' => now()])->save();
+
+            return true;
         } catch (Throwable $exception) {
             report($exception);
+
+            return false;
         }
+    }
+
+    /**
+     * Email goes out unless the company switched it off for the category or the person opted out of it.
+     */
+    private static function emailAllowed(UserNotification $notification): bool
+    {
+        $category = NotificationCategories::for($notification->kind);
+
+        return $category === null
+            || (CompanyNotificationSetting::current()->emailOn($category) && UserNotificationPreference::wantsEmail($notification->user_id, $category));
     }
 
     /**

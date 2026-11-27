@@ -6,6 +6,41 @@ import type { AppNotification } from "@/components/NotificationBell";
 import { Badge, EmptyState, PageHead, Panel, formatDateTime } from "@/components/ui";
 import { api } from "@/lib/api";
 
+type Preference = { key: string; label: string; description: string; company_email: boolean; email: boolean };
+
+/** The person's own email choices per category. Categories the company does not email are shown as off. */
+function EmailPreferences() {
+  const [categories, setCategories] = useState<Preference[] | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    void api<{ categories: Preference[] }>("/me/notification-preferences").then((result) => setCategories(result.categories));
+  }, []);
+
+  async function toggle(key: string, email: boolean) {
+    if (!categories) return;
+    const next = categories.map((category) => (category.key === key ? { ...category, email } : category));
+    const result = await api<{ categories: Preference[] }>("/me/notification-preferences", {
+      method: "PUT", body: { email_off: next.filter((category) => category.company_email && !category.email).map((category) => category.key) },
+    });
+    setCategories(result.categories);
+    setSaved(true);
+  }
+
+  if (!categories) return null;
+
+  return (
+    <Panel title="Email preferences" subtitle={saved ? "Saved." : "Notifications always appear here. Choose which ones are also emailed to you."}>
+      {categories.map((category) => (
+        <label key={category.key} className="checkrow" style={{ alignItems: "flex-start", padding: "6px 0" }}>
+          <input type="checkbox" disabled={!category.company_email} checked={category.email} onChange={(event) => void toggle(category.key, event.target.checked)} style={{ marginTop: 3 }} />
+          <span><strong>{category.label}</strong><span className="tiny" style={{ display: "block" }}>{category.company_email ? category.description : "Your company does not send emails for this."}</span></span>
+        </label>
+      ))}
+    </Panel>
+  );
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -63,6 +98,7 @@ export default function NotificationsPage() {
           </div>
         )}
       </Panel>
+      <EmailPreferences />
     </>
   );
 }

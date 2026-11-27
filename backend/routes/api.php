@@ -47,6 +47,7 @@ use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Leave\UnpaidLeaveController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\Onboarding\ActivationController;
 use App\Http\Controllers\Onboarding\EmployeeOnboardingController;
 use App\Http\Controllers\Onboarding\OnboardingTaskController;
@@ -132,6 +133,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/notifications/count', [NotificationController::class, 'count']);
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->whereUlid('notification');
+        Route::get('/me/notification-preferences', [NotificationSettingsController::class, 'mine']);
+        Route::put('/me/notification-preferences', [NotificationSettingsController::class, 'updateMine']);
+        Route::get('/company/notification-settings', [NotificationSettingsController::class, 'show'])->middleware('permission:company.settings.view,company.settings.manage');
+        Route::put('/company/notification-settings', [NotificationSettingsController::class, 'update'])->middleware('permission:company.settings.manage');
 
         Route::get('/dashboard/payroll', [DashboardController::class, 'payroll'])->middleware('permission:payroll.view,payroll.run,payroll.settings.manage');
         Route::get('/dashboard/manager', [DashboardController::class, 'manager'])->middleware('permission:employees.view,leave.approve,attendance.view');

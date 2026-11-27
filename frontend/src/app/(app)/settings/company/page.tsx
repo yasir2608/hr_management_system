@@ -1,6 +1,7 @@
 "use client";
 
 import { Guard } from "@/components/Guard";
+import { NotificationsTab } from "@/components/company/NotificationsTab";
 import { PayrollCountriesTab } from "@/components/company/PayrollCountriesTab";
 import { PreferencesTab } from "@/components/company/PreferencesTab";
 import { ProfileTab } from "@/components/company/ProfileTab";
@@ -17,6 +18,7 @@ const tabs = [
   { key: "structure", label: "Locations & teams", render: () => <StructureTab /> },
   { key: "regional", label: "Regional settings", render: () => <RegionalTab /> },
   { key: "preferences", label: "Leave & attendance", render: () => <PreferencesTab /> },
+  { key: "notifications", label: "Notifications", render: () => <NotificationsTab /> },
 ];
 
 function CompanySetupPage() {
