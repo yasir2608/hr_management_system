@@ -23,6 +23,14 @@ class Company extends Model
     public const STATUS_SUSPENDED = 'suspended';
 
     /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return ['suspended_at' => 'datetime', 'require_mfa' => 'boolean'];
+    }
+
+    /**
      * @return HasMany<CompanyUser, $this>
      */
     public function memberships(): HasMany

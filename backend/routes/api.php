@@ -50,6 +50,7 @@ use App\Http\Controllers\Organization\DepartmentController;
 use App\Http\Controllers\Organization\LocationController;
 use App\Http\Controllers\Organization\TeamController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Platform\CompanyStatusController as PlatformCompanyStatusController;
 use App\Http\Controllers\Platform\OverviewController as PlatformOverviewController;
 use App\Http\Controllers\Platform\SupportAccessController;
 use App\Http\Controllers\SearchController;
@@ -75,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // M.Y HRMS operations staff only: changes.
     Route::middleware('platform:ops')->prefix('platform')->group(function (): void {
         Route::post('/companies', [PlatformCompanyController::class, 'store']);
+        Route::post('/companies/{company}/suspend', [PlatformCompanyStatusController::class, 'suspend'])->whereUlid('company');
+        Route::post('/companies/{company}/reactivate', [PlatformCompanyStatusController::class, 'reactivate'])->whereUlid('company');
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.

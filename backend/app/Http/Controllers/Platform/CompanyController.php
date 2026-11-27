@@ -55,6 +55,10 @@ class CompanyController extends Controller
 
         return response()->json([
             'company' => $company->only(['id', 'name', 'legal_name', 'country_code', 'contact_email', 'phone', 'city', 'status', 'require_mfa', 'created_at']),
+            'suspension' => $company->status === Company::STATUS_SUSPENDED ? [
+                'at' => $company->suspended_at, 'reason' => $company->suspension_reason,
+                'by' => $company->suspended_by === null ? null : DB::table('users')->where('id', $company->suspended_by)->value('name'),
+            ] : null,
             'usage' => [
                 'active_members' => $members->where('status', CompanyUser::STATUS_ACTIVE)->count(),
                 'employees' => DB::table('employees')->where('company_id', $company->id)->where('current_status', '!=', 'ended')->count(),

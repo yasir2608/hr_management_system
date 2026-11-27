@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Badge, EmptyState, Field, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime } from "@/components/ui";
-import { api } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Person, Stat, Table, formatDate, formatDateTime } from "@/components/ui";
+import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { countryName } from "@/lib/countries";
 
 export type PlatformCompany = {
   company: { id: string; name: string; legal_name: string | null; country_code: string; contact_email: string | null; phone: string | null; city: string | null; status: string; require_mfa: boolean; created_at: string };
+  suspension: { at: string; reason: string | null; by: string | null } | null;
   usage: { active_members: number; employees: number; contractors: number; leave_requests_30d: number; clock_ins_30d: number; last_activity_at: string | null; last_sign_in_at: string | null };
   members: { id: string; status: string; joined_at: string | null; user: { id: string; name: string; email: string; status: string; last_login_at: string | null } | null; roles: string[] }[];
   support_access: { id: string; reason: string; ticket_reference: string | null; expires_at: string; revoked_at: string | null; created_at: string; staff: string | null; active: boolean }[];
@@ -17,18 +19,65 @@ export type PlatformCompany = {
 
 export default function PlatformCompanyPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const isOps = user?.platform_role === "ops";
   const [detail, setDetail] = useState<PlatformCompany | null>(null);
+  const [changing, setChanging] = useState<"suspend" | "reactivate" | null>(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<ApiError | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api<PlatformCompany>(`/platform/companies/${id}`, { noCompany: true }).then(setDetail);
   }, [id]);
+
+  useEffect(load, [load]);
+
+  async function changeStatus() {
+    if (!changing) return;
+    setError(null);
+    try {
+      const result = await api<{ message: string }>(`/platform/companies/${id}/${changing}`, { method: "POST", body: { reason }, noCompany: true });
+      setNotice(result.message);
+      setChanging(null);
+      setReason("");
+      load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught : new ApiError("Could not change the status.", 0));
+    }
+  }
 
   if (!detail) return <div className="empty">Loading…</div>;
   const { company, usage } = detail;
 
   return (
     <>
-      <PageHead eyebrow="Customer company" title={company.name} subtitle={`${countryName(company.country_code)} · customer since ${formatDate(company.created_at)}`} actions={<Link className="btn" href="/platform/companies">All companies</Link>} />
+      <PageHead eyebrow="Customer company" title={company.name} subtitle={`${countryName(company.country_code)} · customer since ${formatDate(company.created_at)}`} actions={<>
+        <Link className="btn" href="/platform/companies">All companies</Link>
+        {isOps && (company.status === "suspended"
+          ? <button className="btn primary" onClick={() => setChanging("reactivate")}>Reactivate</button>
+          : <button className="btn danger" onClick={() => setChanging("suspend")}>Suspend company</button>)}
+      </>} />
+      {notice && <Banner tone="success">{notice}</Banner>}
+      {detail.suspension && (
+        <Banner tone="error">
+          Suspended {formatDateTime(detail.suspension.at)}{detail.suspension.by && ` by ${detail.suspension.by}`}. Nobody in this company can open it until it is reactivated.
+          {detail.suspension.reason && <div><strong>Reason:</strong> {detail.suspension.reason}</div>}
+        </Banner>
+      )}
+      {changing && (
+        <Modal
+          title={changing === "suspend" ? `Suspend ${company.name}` : `Reactivate ${company.name}`}
+          onClose={() => { setChanging(null); setError(null); }}
+          footer={<><button className="btn" onClick={() => setChanging(null)}>Cancel</button><button className={`btn ${changing === "suspend" ? "danger" : "primary"}`} onClick={() => void changeStatus()}>{changing === "suspend" ? "Suspend company" : "Reactivate company"}</button></>}
+        >
+          {error && <Banner tone="error">{error.message}</Banner>}
+          {changing === "suspend" && <div className="callout">All {usage.active_members} users lose access to this company straight away. Their data is kept and nothing is deleted.</div>}
+          <Field label="Reason" required error={error?.errors.reason?.[0]} hint="Kept in the platform activity log and the company’s own activity history.">
+            <textarea className="input" rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
+          </Field>
+        </Modal>
+      )}
       <div className="grid stats">
         <Stat label="Active users" value={usage.active_members} note={`Last sign-in ${usage.last_sign_in_at ? formatDateTime(usage.last_sign_in_at) : "never"}`} />
         <Stat label="Employees" value={usage.employees} note={`${usage.contractors} active contractors`} />
