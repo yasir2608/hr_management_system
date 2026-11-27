@@ -164,6 +164,16 @@ class Employee extends Model
     }
 
     /**
+     * The payroll group the employee is paid in (set by payroll, not part of the HR record).
+     *
+     * @return BelongsTo<PayrollGroup, $this>
+     */
+    public function payrollGroup(): BelongsTo
+    {
+        return $this->belongsTo(PayrollGroup::class);
+    }
+
+    /**
      * @return HasMany<EmployeeTaxDetail, $this>
      */
     public function taxDetails(): HasMany

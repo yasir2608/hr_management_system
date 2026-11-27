@@ -15,6 +15,7 @@ use App\Models\Employee;
 use App\Models\LeavePolicy;
 use App\Models\LeaveType;
 use App\Models\Location;
+use App\Models\PayrollGroup;
 use App\Models\PayrollSetting;
 use App\Models\Role;
 use App\Models\Team;
@@ -151,6 +152,12 @@ class DemoSeeder extends Seeder
             if ($managerNumber !== null) {
                 $record->changeManager($employee, Employee::query()->where('employee_number', $managerNumber)->value('id'), $start, 'Joined');
             }
+        }
+
+        // Payroll groups for the UK and Pakistan; US employees stay unassigned so the demo shows that warning.
+        foreach (['GB' => 'UK monthly', 'PK' => 'Pakistan monthly'] as $country => $name) {
+            $group = PayrollGroup::query()->firstOrCreate(['name' => $name], ['country_code' => $country]);
+            Employee::query()->where('work_country', $country)->whereNull('payroll_group_id')->update(['payroll_group_id' => $group->id]);
         }
     }
 
