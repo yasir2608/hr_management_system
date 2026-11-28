@@ -19,7 +19,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Phone layout: the sidebar becomes a slide-in menu. It remembers the page it was opened on,
+  // so moving to another page closes it.
+  const [navOpenOn, setNavOpenOn] = useState<string | null>(null);
+  const navOpen = navOpenOn === pathname;
+  const setNavOpen = (open: boolean) => setNavOpenOn(open ? pathname : null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // While the menu is open: Esc closes it and the page behind it does not scroll.
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNavOpenOn(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navOpen]);
 
   async function signOutOthers() {
     try {
@@ -71,12 +91,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const roleName = (access?.roles ?? []).map((key) => ROLE_NAMES[key] ?? humanize(key))[0] ?? "Member";
 
   return (
-    <div className="shell">
-      <aside className="side">
-        <Link href="/dashboard" className="brand" style={{ textDecoration: "none" }}>
-          <span className="logo">✦</span>
-          <span>M.Y HRMS</span>
-        </Link>
+    <div className={`shell${navOpen ? " navopen" : ""}`}>
+      <aside className="side" id="app-nav" aria-label="Main menu">
+        <div className="sidehead">
+          <Link href="/dashboard" className="brand" style={{ textDecoration: "none" }}>
+            <span className="logo">✦</span>
+            <span>M.Y HRMS</span>
+          </Link>
+          <button type="button" className="navclose" onClick={() => setNavOpen(false)} aria-label="Close menu">×</button>
+        </div>
         {groups.map((group, index) => (
           <nav className={`navgroup${index === groups.length - 1 && groups.length > 1 ? " navbottom" : ""}`} key={group.label} aria-label={group.label}>
             <div className="navlabel">{group.label}</div>
@@ -107,8 +130,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
+      {navOpen && <div className="navbackdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
       <main className="main">
         <header className="top">
+          <button
+            type="button"
+            className="navtoggle"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open menu"
+            aria-controls="app-nav"
+            aria-expanded={navOpen}
+          >
+            <span /><span /><span />
+          </button>
           <div className="crumb">
             {company.name} <span className="crumbsep">/</span> <b>{currentChild?.label ?? "Workspace"}</b>
           </div>
@@ -148,13 +182,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         {notice && <div className="toast show" role="status">{notice}</div>}
-        <div className="mobilebar">
-          <select aria-label="Choose screen" value={currentChild?.href ?? ""} onChange={(event) => router.push(event.target.value)}>
-            {items.map((item) => (
-              <option key={item.href} value={item.href}>{item.label}</option>
-            ))}
-          </select>
-        </div>
       </main>
     </div>
   );

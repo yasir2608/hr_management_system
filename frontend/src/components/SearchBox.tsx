@@ -37,10 +37,9 @@ export function SearchBox() {
   const showing = open && term.trim().length >= 2 && results !== null;
 
   return (
-    <div ref={box} style={{ position: "relative" }}>
+    <div ref={box} className="topsearch">
       <input
         className="input"
-        style={{ width: 240 }}
         type="search"
         placeholder="Search people…"
         aria-label="Search people"
@@ -52,7 +51,7 @@ export function SearchBox() {
         }}
       />
       {showing && (
-        <div className="menu" role="listbox" style={{ left: 0, right: "auto", width: 300 }}>
+        <div className="menu" role="listbox" style={{ left: 0, right: "auto" }}>
           {results.length === 0 && <div className="tiny" style={{ padding: "8px 10px" }}>No matches you have access to.</div>}
           {results.map((result) => (
             <Link key={`${result.type}-${result.id}`} href={result.href} onClick={() => setOpen(false)}>
