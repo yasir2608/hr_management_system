@@ -25,7 +25,7 @@ class CompanyBillingViewTest extends TestCase
         $this->travelTo('2026-04-10 10:00:00');
         $this->setUpCompany(['name' => 'Northstar Studio']);
         $this->other = Company::factory()->create(['name' => 'Other Co']);
-        $this->ops = User::factory()->create(['platform_role' => 'ops']);
+        $this->ops = User::factory()->create(['platform_role' => 'ops', 'can_manage_billing' => true]);
         $this->asCompany(fn () => Employee::factory()->count(3)->create(['current_status' => Employee::STATUS_ACTIVE]));
 
         $plan = $this->actingAs($this->ops)->postJson('/api/platform/billing/plans', ['name' => 'Growth', 'price_basis' => 'per_employee', 'price' => 6, 'currency' => 'USD', 'billing_period' => 'monthly'])->json('id');

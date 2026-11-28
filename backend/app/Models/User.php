@@ -49,6 +49,15 @@ class User extends Authenticatable
             'mfa_enabled' => 'boolean',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'can_manage_billing' => 'boolean',
         ];
+    }
+
+    /**
+     * Operations staff given billing rights may change customer billing. Support staff never can.
+     */
+    public function canManageBilling(): bool
+    {
+        return $this->platform_role === 'ops' && $this->can_manage_billing === true;
     }
 }

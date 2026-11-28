@@ -77,7 +77,7 @@ class DemoSeeder extends Seeder
         $this->user('disabled@northstar.example', 'Former Employee', User::STATUS_DISABLED);
 
         // M.Y HRMS operations staff: not a member of any company.
-        $this->user('ops@myhrms.example', 'Omar Siddiqui')->forceFill(['platform_role' => 'ops'])->save();
+        $this->user('ops@myhrms.example', 'Omar Siddiqui')->forceFill(['platform_role' => 'ops', 'can_manage_billing' => true])->save();
 
         app(CurrentCompany::class)->runAs($northstar, fn () => $this->northstarPeople());
     }

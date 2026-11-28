@@ -42,7 +42,7 @@ class BillingInvoiceController extends Controller
                 'paid_this_month' => $paidThisMonth->groupBy('currency')->map(fn ($group): string => number_format((float) $group->sum('amount'), 2, '.', '')),
             ],
             'payment_methods' => BillingInvoice::PAYMENT_METHODS,
-            'can_manage' => auth()->user()->platform_role === 'ops',
+            'can_manage' => auth()->user()->canManageBilling(),
         ]);
     }
 
@@ -55,7 +55,7 @@ class BillingInvoiceController extends Controller
                 ->map(fn (BillingInvoice $invoice): array => $this->present($invoice, $today))->values(),
             'suggestion' => $this->suggestion($company, $today),
             'payment_methods' => BillingInvoice::PAYMENT_METHODS,
-            'can_manage' => auth()->user()->platform_role === 'ops',
+            'can_manage' => auth()->user()->canManageBilling(),
         ]);
     }
 

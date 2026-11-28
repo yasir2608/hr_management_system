@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PERIOD_LABELS, StateBadge, priceLabel, type Plan, type Subscription } from "@/components/platform/Billing";
+import { BillingAccessPanel } from "@/components/platform/BillingAccess";
 import { InvoiceStatus, PaymentLine, type BillingInvoice } from "@/components/platform/BillingInvoices";
 import { Badge, Banner, EmptyState, Field, Modal, PageHead, Panel, Stat, Table, formatDate, money } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -76,6 +77,7 @@ export default function PlatformBillingPage() {
         )}
       </Panel>
       <AllInvoices />
+      <BillingAccessPanel onChange={() => void load()} />
       {editing && <PlanForm plan={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onSaved={(message) => { setEditing(null); setNotice(message); void load(); }} />}
     </>
   );

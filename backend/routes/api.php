@@ -71,6 +71,7 @@ use App\Http\Controllers\Payroll\PayrollSettingsController;
 use App\Http\Controllers\Payroll\PayslipController;
 use App\Http\Controllers\Payroll\RunIssueController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
+use App\Http\Controllers\Platform\BillingAccessController as PlatformBillingAccessController;
 use App\Http\Controllers\Platform\BillingController as PlatformBillingController;
 use App\Http\Controllers\Platform\BillingInvoiceController as PlatformBillingInvoiceController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
@@ -109,6 +110,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/users/{user}/mfa-reset', [PlatformUserController::class, 'resetMfa'])->whereUlid('user');
         Route::post('/users/{user}/lock', [PlatformUserController::class, 'lock'])->whereUlid('user');
         Route::post('/users/{user}/unlock', [PlatformUserController::class, 'unlock'])->whereUlid('user');
+    });
+
+    // Customer billing changes: operations staff given billing rights only.
+    Route::middleware(['platform:ops', 'platform.billing'])->prefix('platform')->group(function (): void {
         Route::post('/billing/plans', [PlatformBillingController::class, 'storePlan']);
         Route::put('/billing/plans/{plan}', [PlatformBillingController::class, 'updatePlan'])->whereUlid('plan');
         Route::post('/companies/{company}/subscriptions', [PlatformBillingController::class, 'storeSubscription'])->whereUlid('company');
@@ -118,6 +123,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/companies/{company}/invoices/{invoice}/void', [PlatformBillingInvoiceController::class, 'void'])->whereUlid(['company', 'invoice']);
         Route::post('/companies/{company}/invoices/{invoice}/payment', [PlatformBillingInvoiceController::class, 'recordPayment'])->whereUlid(['company', 'invoice']);
         Route::delete('/companies/{company}/invoices/{invoice}/payment', [PlatformBillingInvoiceController::class, 'undoPayment'])->whereUlid(['company', 'invoice']);
+        Route::post('/billing/access/{user}', [PlatformBillingAccessController::class, 'grant'])->whereUlid('user');
+        Route::delete('/billing/access/{user}', [PlatformBillingAccessController::class, 'revoke'])->whereUlid('user');
     });
 
     // Staff console: any M.Y HRMS staff role (ops or support) can view.
@@ -132,6 +139,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/health', [PlatformHealthController::class, 'show']);
         Route::get('/billing', [PlatformBillingController::class, 'overview']);
         Route::get('/billing/plans', [PlatformBillingController::class, 'plans']);
+        Route::get('/billing/access', [PlatformBillingAccessController::class, 'index']);
         Route::get('/billing/invoices', [PlatformBillingInvoiceController::class, 'index']);
         Route::get('/companies/{company}/invoices', [PlatformBillingInvoiceController::class, 'forCompany'])->whereUlid('company');
         Route::get('/companies/{company}/subscriptions', [PlatformBillingController::class, 'subscriptions'])->whereUlid('company');

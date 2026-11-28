@@ -22,7 +22,7 @@ class PlansAndSubscriptionsTest extends TestCase
 
         $this->travelTo('2026-03-15 10:00:00');
         $this->setUpCompany(['name' => 'Northstar Studio']);
-        $this->ops = User::factory()->create(['platform_role' => 'ops']);
+        $this->ops = User::factory()->create(['platform_role' => 'ops', 'can_manage_billing' => true]);
         $this->support = User::factory()->create(['platform_role' => 'support']);
     }
 

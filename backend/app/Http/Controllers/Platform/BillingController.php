@@ -50,7 +50,7 @@ class BillingController extends Controller
                 'without_plan' => $companies->whereNull('subscription')->count(),
                 'on_trial' => $companies->filter(fn (array $row): bool => ($row['subscription']['state'] ?? null) === 'trial')->count(),
             ],
-            'can_manage' => auth()->user()->platform_role === 'ops',
+            'can_manage' => auth()->user()->canManageBilling(),
         ]);
     }
 
@@ -90,7 +90,7 @@ class BillingController extends Controller
             'current' => ($current = CompanySubscription::inForce(CompanySubscription::query()->where('company_id', $company->id), $today)->first()) ? $this->present($current, $today) : null,
             'history' => $history->map(fn (CompanySubscription $subscription): array => $this->present($subscription, $today))->values(),
             'plans' => BillingPlan::query()->where('is_active', true)->orderBy('name')->get(),
-            'can_manage' => auth()->user()->platform_role === 'ops',
+            'can_manage' => auth()->user()->canManageBilling(),
         ]);
     }
 
